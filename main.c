@@ -24,7 +24,7 @@ int main(void) {
 			GPIO_ResetBits(GPIOC, GPIO_Pin_13);
 
         if(s_perc++ > 100) s_perc = 0;
-        Motor_SetSpeed_L((float)s_perc);
+        Motor_SetSpeed_R((float)s_perc);
         Delay_ms(10);
     }
 }
