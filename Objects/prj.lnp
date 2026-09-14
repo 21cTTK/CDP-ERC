@@ -27,6 +27,8 @@
 ".\objects\system_stm32f10x.o"
 ".\objects\stm32f10x_it.o"
 ".\objects\main.o"
+".\objects\pwm-motor.o"
+".\objects\delay.o"
 --library_type=microlib --strict --scatter ".\Objects\prj.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

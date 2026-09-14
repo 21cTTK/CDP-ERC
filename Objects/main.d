@@ -28,3 +28,5 @@
 .\objects\main.o: .\LIB\PERIPH\stm32f10x_usart.h
 .\objects\main.o: .\LIB\PERIPH\stm32f10x_wwdg.h
 .\objects\main.o: .\LIB\misc.h
+.\objects\main.o: .\HW\PWM-Motor.h
+.\objects\main.o: .\SW\Delay.h
