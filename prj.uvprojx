@@ -673,9 +673,33 @@
         </Group>
         <Group>
           <GroupName>HW</GroupName>
+          <Files>
+            <File>
+              <FileName>PWM-Motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HW\PWM-Motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>PWM-Motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HW\PWM-Motor.h</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>SW</GroupName>
+          <Files>
+            <File>
+              <FileName>Delay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SW\Delay.c</FilePath>
+            </File>
+            <File>
+              <FileName>Delay.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SW\Delay.h</FilePath>
+            </File>
+          </Files>
         </Group>
       </Groups>
     </Target>
