@@ -5,6 +5,8 @@
 
 void Motor_Init(void)
 {
+	/* PWM CFG Section */
+
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB |
 						   RCC_APB2Periph_GPIOA, ENABLE);
@@ -14,9 +16,11 @@ void Motor_Init(void)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-	// TIM3_CH3,4 --> PB0,PB1
+	// TIM3_CH1_4 --> PA6,PA7,PB0,PB1
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	
 	// TIM3 - Time Base Unit Init
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
@@ -27,7 +31,7 @@ void Motor_Init(void)
 	TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0U;
 	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStructure);
 	
-	// TIM3_OC1,2 Init
+	// TIM3_OC1_4 Init
 	TIM_OCInitTypeDef TIM_OCInitStructure;
 	TIM_OCStructInit(&TIM_OCInitStructure);
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;			
@@ -35,8 +39,12 @@ void Motor_Init(void)
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
 	TIM_OCInitStructure.TIM_Pulse = 0U;								//CCR initial value
 
+	TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+	TIM_OC2Init(TIM3, &TIM_OCInitStructure);
 	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
 	TIM_OC4Init(TIM3, &TIM_OCInitStructure);
+	TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_ARRPreloadConfig(TIM3, ENABLE);
@@ -44,26 +52,36 @@ void Motor_Init(void)
 	// TIM3 EN
 	TIM_Cmd(TIM3, ENABLE);
 
-	// Driver AIN EN (PA4-AIN1,PA5-AIN2)
+	/* Driver pins Section */
+
+	// Driver AIN EN (PA3_0)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-	GPIO_ResetBits(GPIOA, GPIO_Pin_4 | GPIO_Pin_5);	// AIN1,AIN2 = 0,0 --> Brake
+	GPIO_ResetBits(GPIOA, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3);	// Brake
 }
 
 /// @brief set speed of the motor by entering percentage
 /// @param perc float val like 11.45, ...
-void Motor_SetSpeed_L(float perc)
+void Motor_SetSpeed_M0(float perc)
 {// actual_percentage(duty) = (CCR / 1000) * 100%
+	TIM_SetCompare4(TIM3, (uint16_t)(perc * 10.0f));
+}
+
+void Motor_SetSpeed_M1(float perc)
+{
 	TIM_SetCompare3(TIM3, (uint16_t)(perc * 10.0f));
 }
 
-/// @brief set speed of the motor by entering percentage
-/// @param perc float val like 11.45, ...
-void Motor_SetSpeed_R(float perc)
+void Motor_SetSpeed_M2(float perc)
+{// actual_percentage(duty) = (CCR / 1000) * 100%
+	TIM_SetCompare2(TIM3, (uint16_t)(perc * 10.0f));
+}
+
+void Motor_SetSpeed_M3(float perc)
 {
-	TIM_SetCompare4(TIM3, (uint16_t)(perc * 10.0f));
+	TIM_SetCompare1(TIM3, (uint16_t)(perc * 10.0f));
 }
 
 /// @brief switch motor ON/OFF
