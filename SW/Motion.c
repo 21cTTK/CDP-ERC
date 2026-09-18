@@ -22,7 +22,7 @@ void Motion_Init(void)
 /// @brief set the motion of the robot
 /// @param motion the motion to set; can be any of the values in Motion_t
 /// @param argv the speed percentage arguments for the motion; its meaning varies across different motions
-void Motion_SetMotion(Motion_t motion, uint16_t *argv)
+void Motion_SetMotion(Motion_t motion, float *argv)
 {
     /* Set Input */
     Motor_SetInput(g_MotionCFG[(uint8_t)motion]);
@@ -36,17 +36,11 @@ void Motion_SetMotion(Motion_t motion, uint16_t *argv)
 		Motor_R_SetSpeed(0.0f);
 		break;
 	case MOTION_FORWARD:
-		Motor_L_SetSpeed(argv[0]);
-		Motor_R_SetSpeed(argv[0]);
-		break;
 	case MOTION_BACKWARD:
 		Motor_L_SetSpeed(argv[0]);
 		Motor_R_SetSpeed(argv[0]);
 		break;
 	case MOTION_LEFT:
-		Motor_L_SetSpeed(argv[0]);
-		Motor_R_SetSpeed(argv[1]);
-		break;
 	case MOTION_RIGHT:
 		Motor_L_SetSpeed(argv[0]);
 		Motor_R_SetSpeed(argv[1]);

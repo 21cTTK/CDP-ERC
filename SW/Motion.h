@@ -12,6 +12,6 @@ typedef enum __MOTION_ENUM
 } Motion_t;
 
 void Motion_Init(void);
-void Motion_SetMotion(Motion_t motion, uint16_t *argv);
+void Motion_SetMotion(Motion_t motion, float *argv);
 
 #endif//__MOTION_H
