@@ -6,4 +6,4 @@ uint32_t CmtSysTim_GetMs(void);
 
 void CmtSysTim_ISR(void);
 
-#endif
+#endif//__CMTSYS_TIM_H

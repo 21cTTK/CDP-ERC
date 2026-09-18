@@ -18,8 +18,6 @@ void CmtSys_Init()
     CmtSysTim_Init();
 
     /* Cleanup for startup */
-    Motor_SwitchState(0); // Switch ON motor_L
-    GPIO_SetBits(GPIOA, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3);
 }
 
 void CmtSys_Update()

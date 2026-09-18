@@ -4,4 +4,4 @@
 void CmtSys_Init(void);
 void CmtSys_Update(void);
 
-#endif
+#endif//__CMTSYS_H
