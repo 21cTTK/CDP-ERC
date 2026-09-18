@@ -23,6 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
+#include "cmtSys_TIM.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
@@ -142,6 +143,15 @@ void SysTick_Handler(void)
 /*  available peripheral interrupt handler's name please refer to the startup */
 /*  file (startup_stm32f10x_xx.s).                                             */
 /******************************************************************************/
+
+void TIM4_IRQHandler(void)
+{
+  if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET)
+  {
+    TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
+    CmtSysTim_ISR();
+  }
+}
 
 /**
   * @}

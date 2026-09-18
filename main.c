@@ -6,17 +6,7 @@ int main(void) {
 		static uint8_t  tmp = 0;
 		static uint16_t s_tim = 0;
 	
-    Motor_Init();
-
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-    Motor_SwitchState(0); // Switch ON motor_L
-    GPIO_SetBits(GPIOA, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3);
+    
 
     while (1) {
 		if( (tmp++) % 2 )

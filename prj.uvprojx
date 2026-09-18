@@ -669,6 +669,16 @@
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
             </File>
+            <File>
+              <FileName>cmtSys.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\cmtSys.c</FilePath>
+            </File>
+            <File>
+              <FileName>cmtSys.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\cmtSys.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -698,6 +708,16 @@
               <FileName>Delay.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\SW\Delay.h</FilePath>
+            </File>
+            <File>
+              <FileName>cmtSys_TIM.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SW\cmtSys_TIM.c</FilePath>
+            </File>
+            <File>
+              <FileName>cmtSys_TIM.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SW\cmtSys_TIM.h</FilePath>
             </File>
           </Files>
         </Group>
