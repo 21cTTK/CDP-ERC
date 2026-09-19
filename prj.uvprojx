@@ -714,6 +714,16 @@
               <FileType>5</FileType>
               <FilePath>.\HW\Keys.h</FilePath>
             </File>
+            <File>
+              <FileName>HC05.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HW\HC05.c</FilePath>
+            </File>
+            <File>
+              <FileName>HC05.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HW\HC05.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
