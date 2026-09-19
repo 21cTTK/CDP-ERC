@@ -174,11 +174,11 @@ void Key_CheckState_SysTick(void)
 	}
 }
 
+/// @brief `Update()` fn of Keys module; Check whether there's a event or not.
+/// @param events Pointer to the array to store the key events
 void Key_GetEvents(uint8_t *events)
-//void Key_GetEvents(uint8_t **events)
 {
 	uint8_t i;
-	// *events = g_CurrKeyEV;
 	for(i = 0; i < KEY_EV_COUNT; i++)
 	{
 		events[i] = g_CurrKeyEV[i];

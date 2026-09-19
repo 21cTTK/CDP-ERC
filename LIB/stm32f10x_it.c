@@ -25,6 +25,7 @@
 #include "stm32f10x_it.h"
 #include "cmtSys_TIM.h"
 #include "Keys.h"
+#include "HC05.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
@@ -160,6 +161,15 @@ void EXTI4_IRQHandler(void)
   {
     EXTI_ClearITPendingBit(EXTI_Line4);
     Key_UniISR(EXTI_Line4);
+  }
+}
+
+void USART3_IRQHandler(void)
+{
+  if (USART_GetITStatus(USART3, USART_IT_RXNE) != RESET)
+  {
+    USART_ClearITPendingBit(USART3, USART_IT_RXNE);
+    HC05_ISR();
   }
 }
 

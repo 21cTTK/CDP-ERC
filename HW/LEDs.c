@@ -7,8 +7,9 @@ typedef struct __LEDS_DEF_STRUCT
 
 static const LEDdef g_LEDsDef[LED_COUNT] =
 {
-	[LED_MAIN] = {GPIOC, GPIO_Pin_13},
-	[LED_MSG]  = {GPIOA, GPIO_Pin_6}
+	[LED_MAIN]     = {GPIOC, GPIO_Pin_13},
+	[LED_MSG_RX]   = {GPIOA, GPIO_Pin_6},
+	[LED_CMD_EXEC] = {GPIOA, GPIO_Pin_7}
 };
 
 static uint8_t  g_toggleTimes[LED_COUNT]      = {0U};	//tracking remaining toggle times for each LED
