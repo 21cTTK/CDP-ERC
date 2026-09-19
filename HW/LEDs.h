@@ -6,22 +6,10 @@
 
 typedef enum __LEDS_DEF_ENUM
 {
-	LED_MAIN = 0, // Used for: Loop Indicator, Init Indicator
-	LED_MSG,    // Used for: RC module msg received indicator
-	LED_COUNT
+	LED_MAIN = 0, 	// Used for: Loop Indicator, Init Indicator
+	LED_MSG,    	// Used for: RC module msg received indicator
+	LED_COUNT		// should match the number of used LEDs
 } LEDslot;
-
-typedef struct __LEDS_DEF_STRUCT
-{
-	GPIO_TypeDef *port;
-	uint16_t 	  pin;
-} LEDdef;
-
-static const LEDdef g_keysDef[LED_COUNT] =
-{
-	[LED_MAIN] = {GPIOC, GPIO_Pin_13},
-	[LED_MSG]  = {GPIOA, GPIO_Pin_6}
-};
 
 void LED_Init(void);
 void LED_TurnON(LEDslot slot);

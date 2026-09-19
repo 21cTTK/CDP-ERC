@@ -24,6 +24,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
 #include "cmtSys_TIM.h"
+#include "Keys.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
@@ -150,6 +151,15 @@ void TIM4_IRQHandler(void)
   {
     TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
     CmtSysTim_ISR();
+  }
+}
+
+void EXTI4_IRQHandler(void)
+{
+  if (EXTI_GetITStatus(EXTI_Line4) != RESET)
+  {
+    EXTI_ClearITPendingBit(EXTI_Line4);
+    Key_UniISR(EXTI_Line4);
   }
 }
 

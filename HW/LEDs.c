@@ -1,4 +1,15 @@
 #include "LEDs.h"
+typedef struct __LEDS_DEF_STRUCT
+{
+	GPIO_TypeDef *port;
+	uint16_t 	  pin;
+} LEDdef;
+
+static const LEDdef g_LEDsDef[LED_COUNT] =
+{
+	[LED_MAIN] = {GPIOC, GPIO_Pin_13},
+	[LED_MSG]  = {GPIOA, GPIO_Pin_6}
+};
 
 static uint8_t  g_toggleTimes[LED_COUNT]      = {0U};	//tracking remaining toggle times for each LED
 static uint32_t g_nextToggleMs[LED_COUNT]     = {0U};	//tracking next toggle time for each LED
@@ -30,24 +41,24 @@ void LED_Init(void)
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	for(i = 0U; i < LED_COUNT; i++)
 	{
-		GPIO_InitStructure.GPIO_Pin = g_keysDef[i].pin;
-		GPIO_Init(g_keysDef[i].port, &GPIO_InitStructure);
+		GPIO_InitStructure.GPIO_Pin = g_LEDsDef[i].pin;
+		GPIO_Init(g_LEDsDef[i].port, &GPIO_InitStructure);
 
 		//Init OFF
-		GPIO_SetBits(g_keysDef[i].port, g_keysDef[i].pin);
+		GPIO_SetBits(g_LEDsDef[i].port, g_LEDsDef[i].pin);
 	}
 }
 
 void LED_TurnON(LEDslot slot)
 {
 	if (slot < LED_COUNT)
-		GPIO_ResetBits(g_keysDef[slot].port, g_keysDef[slot].pin);
+		GPIO_ResetBits(g_LEDsDef[slot].port, g_LEDsDef[slot].pin);
 }
 
 void LED_TurnOFF(LEDslot slot)
 {
 	if (slot < LED_COUNT)
-		GPIO_SetBits(g_keysDef[slot].port, g_keysDef[slot].pin);
+		GPIO_SetBits(g_LEDsDef[slot].port, g_LEDsDef[slot].pin);
 }
 
 /// @param nowMs: Initial timestamp for the flicker; starts flicker after `intervalMs` of this
@@ -107,7 +118,7 @@ uint8_t LED_IsON(LEDslot slot)
 {
 	if (slot < LED_COUNT)
 		return (uint8_t)(
-			GPIO_ReadInputDataBit(g_keysDef[slot].port, g_keysDef[slot].pin)
+			GPIO_ReadInputDataBit(g_LEDsDef[slot].port, g_LEDsDef[slot].pin)
 			== Bit_RESET);
 
 	return 0U;
