@@ -4,12 +4,14 @@
 #include "Delay.h"
 #include "cmtSys_TIM.h"
 #include "LEDs.h"
+#include "Keys.h"
 
 void CmtSys_Init()
 {
     /* Module Init */
     Motion_Init();
     LED_Init();
+    Key_Init();
 
     // Init Indicator
     for(int i = 0; i < 5; i++)
@@ -23,12 +25,24 @@ void CmtSys_Init()
     CmtSysTim_Init();
 
     /* Cleanup for startup */
+
+	/* Startup Indicator */
     LED_SetFlicker(0, (LEDslot)LED_MSG, 5, 114);
 }
 
 void CmtSys_Update()
 {
     uint32_t nowMs = CmtSysTim_GetMs();
+
+    /* Keys Module Action */
+    uint8_t keyEvents[KEY_EV_COUNT];
+    // Key_GetEvents(&keyEvents);
+    Key_GetEvents(keyEvents);
+
+    if(keyEvents[KEY_EV_LED_ON])
+    {
+        LED_TurnON((LEDslot)LED_MSG);
+    }
 
     /* `Update()` Section */
 

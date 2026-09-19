@@ -13,7 +13,7 @@ int main(void) {
 	else
 		GPIO_ResetBits(GPIOC, GPIO_Pin_13);
 
-	if(s_tim++ > 377891)	 break;
+//	if(s_tim++ > 377891)	 break;
 
 		CmtSys_Update();
     }

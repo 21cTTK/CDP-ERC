@@ -704,6 +704,16 @@
               <FileType>5</FileType>
               <FilePath>.\HW\LEDs.h</FilePath>
             </File>
+            <File>
+              <FileName>Keys.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HW\Keys.c</FilePath>
+            </File>
+            <File>
+              <FileName>Keys.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HW\Keys.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

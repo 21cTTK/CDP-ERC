@@ -1,4 +1,5 @@
 #include "stm32f10x.h"
+#include "Keys.h"
 
 static uint32_t g_SysMs;
 
@@ -33,6 +34,7 @@ void CmtSysTim_Init(void)
 void CmtSysTim_ISR(void)
 {
 	g_SysMs++;
+	Key_CheckState_SysTick();
 }
 
 uint32_t CmtSysTim_GetMs(void)
