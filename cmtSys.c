@@ -3,42 +3,41 @@
 #include "Motion.h"
 #include "Delay.h"
 #include "cmtSys_TIM.h"
+#include "LEDs.h"
 
 void CmtSys_Init()
 {
     /* Module Init */
     Motion_Init();
+    LED_Init();
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC |
-                           RCC_APB2Periph_GPIOA, ENABLE);
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-    GPIO_ResetBits(GPIOC, GPIO_Pin_13);
-    GPIO_SetBits(GPIOA, GPIO_Pin_6 | GPIO_Pin_7);
-
+    // Init Indicator
     for(int i = 0; i < 5; i++)
     {
-        GPIO_ResetBits(GPIOC, GPIO_Pin_13);
+        LED_TurnON((LEDslot)LED_MAIN);
         Delay_ms(114);
-        GPIO_SetBits(GPIOC, GPIO_Pin_13);
+        LED_TurnOFF((LEDslot)LED_MAIN);
         Delay_ms(114);
     }
 
     CmtSysTim_Init();
 
     /* Cleanup for startup */
+    LED_SetFlicker(0, (LEDslot)LED_MSG, 5, 114);
 }
 
 void CmtSys_Update()
 {
     uint32_t nowMs = CmtSysTim_GetMs();
 
-    float speed = 67.91;
-    Motion_SetMotion(MOTION_FORWARD, &speed);
+    /* `Update()` Section */
+
+    LED_CheckFlicker(nowMs);
+
+    // float speed = 67.91;
+	
+	// if(nowMs < 1860)
+	// 	Motion_SetMotion(MOTION_FORWARD, &speed);
+	// else
+	// 	Motion_SetMotion(MOTION_BACKWARD, &speed);
 }

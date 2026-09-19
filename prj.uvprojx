@@ -694,6 +694,16 @@
               <FileType>5</FileType>
               <FilePath>.\HW\PWM-Motor.h</FilePath>
             </File>
+            <File>
+              <FileName>LEDs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HW\LEDs.c</FilePath>
+            </File>
+            <File>
+              <FileName>LEDs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HW\LEDs.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

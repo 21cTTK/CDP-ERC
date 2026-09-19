@@ -4,7 +4,7 @@
 
 /// @brief motion cfg tab for the robot;
 /// @note used exclusively in `Motion_SetMotion()` to fill the input arr
-static const uint8_t g_MotionCFG[MOTION_COUNT][MOTOR_PIN_COUNT] =
+static const uint8_t g_MotionPinsCFG[MOTION_COUNT][MOTOR_PIN_COUNT] =
 {
     [MOTION_STOP]     = {0, 0, 0, 0},
     [MOTION_FORWARD]  = {0, 1, 0, 1},
@@ -25,7 +25,7 @@ void Motion_Init(void)
 void Motion_SetMotion(Motion_t motion, float *argv)
 {
     /* Set Input */
-    Motor_SetInput(g_MotionCFG[(uint8_t)motion]);
+    Motor_SetInput(g_MotionPinsCFG[(uint8_t)motion]);
 
     /* Set Speed */
 
