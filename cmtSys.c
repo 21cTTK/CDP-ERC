@@ -6,7 +6,12 @@
 #include "LEDs.h"
 #include "Keys.h"
 #include "HC05.h"
+#include "Enc.h"
 #include <string.h>
+
+#define __TEMP__ENC_MSG_INTVL_MS    1145
+
+static uint32_t __TEMP__nextEncMsgMs;
 
 void CmtSys_Init()
 {
@@ -16,6 +21,7 @@ void CmtSys_Init()
     LED_Init();
     Key_Init();
     HC05_Init();
+    //Enc_Init();
 
     // Init Indicator
     for(int i = 0; i < 5; i++)
@@ -29,6 +35,7 @@ void CmtSys_Init()
     CmtSysTim_Init();
 
     /* Cleanup for startup */
+    __TEMP__nextEncMsgMs = 0;
 }
 
 void CmtSys_Update()
@@ -36,9 +43,14 @@ void CmtSys_Update()
     /* Forward Decl Section */
     
     uint32_t nowMs;                            // cmtSys_TIM module:    system time
-    uint8_t keyEvents[KEY_EV_COUNT];           // Keys module:          @ref `g_CurrKeyEV[KEY_EV_COUNT]`
-    uint8_t hc05RxFlag;                        // HC05 module:          @ref `HC05_RxFlag`
-    char hc05Msg[HC05_UART_PACKET_MAXLEN];      // HC05 module:          @ref `HC05_RxPacket`
+    uint8_t keyEvents[KEY_EV_COUNT];           // Keys module:
+                                               ///                      @ref @var `g_CurrKeyEV[KEY_EV_COUNT]`
+    uint8_t hc05RxFlag;                        // HC05 module:          
+                                               ///                      @ref @var `HC05_RxFlag`
+    char hc05Msg[HC05_UART_PACKET_MAXLEN];     // HC05 module:          
+                                               ///                      @ref @var `HC05_RxPacket`
+    uint16_t encCnt[2] = {0,0};                        // Encoder module:       used to store the read-in CNT value
+                                               ///                      @ref `Enc_GetCNT(uint16_t *cnt)`
 
     /* `Update()` Section */
 
@@ -47,6 +59,14 @@ void CmtSys_Update()
     hc05RxFlag = HC05_GetRxFlag();
 
     LED_CheckFlicker(nowMs);
+    
+    // Enc_GetCNT(encCnt);
+    // if(__TEMP__nextEncMsgMs < nowMs)
+    // {
+    //     HC05_SendString("ENC OUTPUT:\r\n");
+    //     HC05_SendStringFormatted("ENC:%d,%d.\r\n", encCnt[0], encCnt[1]);
+    //     __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
+    // }
 
     /* Keys Module Action */
     
@@ -64,9 +84,9 @@ void CmtSys_Update()
 
         if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
-            float speed = 67.0f;
-            Motion_SetMotion((Motion_t)MOTION_FORWARD, &speed);
-            
+            float speed[] = {67.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD\" - Y - Succeeded\r\n");
         }
@@ -88,8 +108,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
-            float speed = 67.0f;
-            Motion_SetMotion((Motion_t)MOTION_BACKWARD, &speed);
+            float speed[] = {67.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_BACKWARD, speed);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+BACKWARD\" - Y - Succeeded\r\n");
