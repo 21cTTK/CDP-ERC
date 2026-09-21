@@ -10,6 +10,7 @@
 
 void HC05_Init(void);
 void HC05_SendString(char *String);
+void HC05_SendStringFormatted(const char *str_f, ...);
 uint8_t HC05_GetRxFlag(void);
 void    HC05_GetRxPacket(char *buffer);
 void HC05_ISR(void);

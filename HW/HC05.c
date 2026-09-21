@@ -1,6 +1,7 @@
 #include "stm32f10x.h"                  // Device header
-#include <string.h>
 #include "HC05.h"
+#include <string.h>
+#include <stdarg.h>
 
 static char 	HC05_RxPacket[HC05_UART_PACKET_MAXLEN];
 static uint8_t  HC05_RxFlag = 0U;       // `1`: Full Packet received and ready to be read; `0`: No packet received
@@ -18,6 +19,49 @@ static void HC05_SendByte(uint8_t byte)
 {
 	USART_SendData(USART3, byte);
 	while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+}
+
+/// @brief Format a signed integer as a string up to 5 char long for sending over HC-05
+/// @note - used exclusively in @ref `HC05_SendStringFormatted(const char *str_f, ...)` for formatting `%d` values
+///	@note - display is preceded by a '+' or '-' sign; display with minimal digits possible for the input
+/// @param dest "Output" val
+/// @param value input a signed integer value
+static void HC05_FormatInt5(char *dest, int16_t value)
+{
+	// sign
+    dest[0] = (value < 0) ? '-' : '+';
+
+    uint16_t absVal = (value < 0) ? (uint16_t)(-value) : (uint16_t)value;
+
+	// overflow case
+    if (absVal > 9999) {
+        strcpy(dest + 1, "OVF!");
+        return;
+    }
+
+	// decide how many digits to display (tries to minimize it)
+    if (absVal >= 1000) {
+        dest[1] = '0' + absVal / 1000;
+        dest[2] = '0' + (absVal / 100) % 10;
+        dest[3] = '0' + (absVal / 10) % 10;
+        dest[4] = '0' + absVal % 10;
+        dest[5] = '\0';
+    }
+    else if (absVal >= 100) {
+        dest[1] = '0' + absVal / 100;
+        dest[2] = '0' + (absVal / 10) % 10;
+        dest[3] = '0' + absVal % 10;
+        dest[4] = '\0';
+    }
+    else if (absVal >= 10) {
+        dest[1] = '0' + absVal / 10;
+        dest[2] = '0' + absVal % 10;
+        dest[3] = '\0';
+    }
+    else {
+        dest[1] = '0' + absVal;
+        dest[2] = '\0';
+    }
 }
 
 void HC05_Init(void)
@@ -68,6 +112,54 @@ void HC05_SendString(char *string)
 	uint8_t i;
 	for (i = 0; string[i] != '\0'; i ++)
 		HC05_SendByte(string[i]);
+}
+
+/// @brief Send a formatted string over HC-05 Bluetooth module; API fn
+/// @note - supports only `%d` for signed integers; other format specifiers are ignored
+/// @note - currently DOESN'T check if the buffer overflows; do not enter str that are too long and mind ur '%d'
+/// @param str_f The format string (`printf`-style)
+void HC05_SendStringFormatted(const char *str_f, ...)
+{
+	char buffer[HC05_UART_PACKET_MAXLEN] = "";
+	
+	va_list args;
+	va_start(args, str_f);
+	
+		uint16_t end = 0;
+		for(const char *p = str_f; *p != '\0'; p++)
+		{
+			if(*p == '%')
+			{// is formatted char; skip the '%...' and swap in the formatted value 
+				p++;
+				switch(*p)
+				{
+					case 'd':
+					{
+						int val = va_arg(args, int);
+                    
+						char valStr[6];		// 1 * sign char + 4 * possible digits + 1 * '\0'
+						HC05_FormatInt5(valStr, (int16_t)val);
+						
+						for (const char *q = valStr; *q != '\0'; q++)
+		                    buffer[end++] = *q;
+
+						break;
+					}
+					default:
+						break;
+				}
+			}
+			else
+			{
+				buffer[end++] = *p;
+			}
+		}
+		
+		buffer[end] = '\0';
+
+	va_end(args);
+
+	HC05_SendString(buffer);
 }
 
 /// @brief - `Update()` fn of HC05 module;

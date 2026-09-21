@@ -724,6 +724,16 @@
               <FileType>5</FileType>
               <FilePath>.\HW\HC05.h</FilePath>
             </File>
+            <File>
+              <FileName>Enc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HW\Enc.c</FilePath>
+            </File>
+            <File>
+              <FileName>Enc.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HW\Enc.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
