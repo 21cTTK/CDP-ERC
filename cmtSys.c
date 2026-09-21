@@ -84,9 +84,9 @@ void CmtSys_Update()
 
         if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
-            float speed = 67.0f;
-            Motion_SetMotion((Motion_t)MOTION_FORWARD, &speed);
-            
+            float speed[] = {67.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD\" - Y - Succeeded\r\n");
         }
@@ -108,8 +108,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
-            float speed = 67.0f;
-            Motion_SetMotion((Motion_t)MOTION_BACKWARD, &speed);
+            float speed[] = {67.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_BACKWARD, speed);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+BACKWARD\" - Y - Succeeded\r\n");
