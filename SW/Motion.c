@@ -29,23 +29,6 @@ void Motion_SetMotion(Motion_t motion, float *argv)
 
     /* Set Speed */
 
-    switch(motion)
-    {
-	case MOTION_STOP:
-		Motor_L_SetSpeed(0.0f);
-		Motor_R_SetSpeed(0.0f);
-		break;
-	case MOTION_FORWARD:
-	case MOTION_BACKWARD:
-		Motor_L_SetSpeed(argv[0]);
-		Motor_R_SetSpeed(argv[0]);
-		break;
-	case MOTION_LEFT:
-	case MOTION_RIGHT:
-		Motor_L_SetSpeed(argv[0]);
-		Motor_R_SetSpeed(argv[1]);
-		break;
-	default:
-		break;
-    }
+	Motor_L_SetSpeed(argv[0]);
+	Motor_R_SetSpeed(argv[1]);
 }

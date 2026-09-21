@@ -70,6 +70,22 @@ void CmtSys_Update()
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD\" - Y - Succeeded\r\n");
         }
+        else if (strcmp(hc05Msg, "MOTION+FORWARD_LEFT") == 0)
+        {
+            float speed[] = {24.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+
+            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
+            HC05_SendString("CMD:\"MOTION+FORWARD_LEFT\" - Y - Succeeded\r\n");
+        }
+        else if (strcmp(hc05Msg, "MOTION+FORWARD_RIGHT") == 0)
+        {
+            float speed[] = {67.0f, 24.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+
+            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
+            HC05_SendString("CMD:\"MOTION+FORWARD_RIGHT\" - Y - Succeeded\r\n");
+        }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
             float speed = 67.0f;
@@ -78,7 +94,23 @@ void CmtSys_Update()
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+BACKWARD\" - Y - Succeeded\r\n");
         }
-        else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
+        else if (strcmp(hc05Msg, "MOTION+LEFT") == 0)
+        {
+            float speed[] = {66.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_LEFT, speed);
+
+            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
+            HC05_SendString("CMD:\"MOTION+LEFT\" - Y - Succeeded\r\n");
+        }
+        else if (strcmp(hc05Msg, "MOTION+RIGHT") == 0)
+        {
+            float speed[] = {66.0f, 67.0f};
+            Motion_SetMotion((Motion_t)MOTION_RIGHT, speed);
+
+            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
+            HC05_SendString("CMD:\"MOTION+RIGHT\" - Y - Succeeded\r\n");
+        }
+		else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
             Motion_SetMotion((Motion_t)MOTION_STOP, (float *)NULL);
 
@@ -90,5 +122,6 @@ void CmtSys_Update()
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 6, 114);
             HC05_SendString("CMD:\"UNKNOWN.\" - N - Wtf is it even\r\n");
         }
+
     }
 }
