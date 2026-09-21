@@ -21,7 +21,7 @@ void CmtSys_Init()
     LED_Init();
     Key_Init();
     HC05_Init();
-    //Enc_Init();
+    Enc_Init();
 
     // Init Indicator
     for(int i = 0; i < 5; i++)
@@ -60,13 +60,13 @@ void CmtSys_Update()
 
     LED_CheckFlicker(nowMs);
     
-    // Enc_GetCNT(encCnt);
-    // if(__TEMP__nextEncMsgMs < nowMs)
-    // {
-    //     HC05_SendString("ENC OUTPUT:\r\n");
-    //     HC05_SendStringFormatted("ENC:%d,%d.\r\n", encCnt[0], encCnt[1]);
-    //     __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
-    // }
+    if(__TEMP__nextEncMsgMs < nowMs)
+    {
+		Enc_GetCNT(encCnt);
+        HC05_SendString("ENC OUTPUT:\r\n");
+        HC05_SendStringFormatted("ENC:%d,%d.\r\n", encCnt[0], encCnt[1]);
+        __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
+    }
 
     /* Keys Module Action */
     
