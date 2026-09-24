@@ -10,6 +10,7 @@
 #include <string.h>
 
 #define __TEMP__ENC_MSG_INTVL_MS    1145
+#define __TEMP__OFFSET              114
 
 static uint32_t __TEMP__nextEncMsgMs;
 
@@ -21,7 +22,7 @@ void CmtSys_Init()
     LED_Init();
     Key_Init();
     HC05_Init();
-    //Enc_Init();
+    Enc_Init();
 
     // Init Indicator
     for(int i = 0; i < 5; i++)
@@ -49,8 +50,9 @@ void CmtSys_Update()
                                                ///                      @ref @var `HC05_RxFlag`
     char hc05Msg[HC05_UART_PACKET_MAXLEN];     // HC05 module:          
                                                ///                      @ref @var `HC05_RxPacket`
-    uint16_t encCnt[2] = {0,0};                        // Encoder module:       used to store the read-in CNT value
+    static uint16_t encCnt[2] = {0,0};         // Encoder module:       used to store the read-in CNT value
                                                ///                      @ref `Enc_GetCNT(uint16_t *cnt)`
+    static uint32_t __TEMP__s_nextEncSampMs = 0;
 
     /* `Update()` Section */
 
@@ -60,13 +62,17 @@ void CmtSys_Update()
 
     LED_CheckFlicker(nowMs);
     
-    // Enc_GetCNT(encCnt);
-    // if(__TEMP__nextEncMsgMs < nowMs)
-    // {
-    //     HC05_SendString("ENC OUTPUT:\r\n");
-    //     HC05_SendStringFormatted("ENC:%d,%d.\r\n", encCnt[0], encCnt[1]);
-    //     __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
-    // }
+    if(__TEMP__s_nextEncSampMs < nowMs)
+    {
+        Enc_GetCNT(encCnt);
+        __TEMP__s_nextEncSampMs = nowMs - __TEMP__OFFSET;
+    }
+    if(__TEMP__nextEncMsgMs < nowMs)
+    {
+        HC05_SendString("ENC OUTPUT:\r\n");
+        HC05_SendStringFormatted("ENC:%d,%d.\r\n", encCnt[0], encCnt[1]);
+        __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
+    }
 
     /* Keys Module Action */
     
