@@ -1,19 +1,21 @@
 #include "stm32f10x.h"
 
 #define ENC_SPEED_SAMP_INTVL_MS  	520
+#define ENC_CNT_ZERO_BASE   32768 // 1<<15
 #define ENC_LINES 			11
-#define ENC_MULT			4	// depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
+#define ENC_MULT			4	  // depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
 #define ENC_GEAR_RATIO  	9.6
 
-/// @brief Read in curr CNT and reset it
-/// @note - used exclusively in @ref `uint16_t Enc_SampleSpeed(uint32_t nowMs)`
+/// @brief Read in curr CNT and reset it to `ENC_CNT_ZERO_BASE`.
+/// @note - real CNT ticks are calculated based on delta with `ENC_CNT_ZERO_BASE` to prevent ovf/udf
+/// @note - used exclusively in @ref `uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)`
 /// @param cnt value storage array
 static void Enc_GetCNT(uint16_t *cnt)
 {
 	cnt[0] = TIM_GetCounter(TIM1);
 	cnt[1] = TIM_GetCounter(TIM2);
-	TIM_SetCounter(TIM1, 0);
-	TIM_SetCounter(TIM2, 0);
+	TIM_SetCounter(TIM1, ENC_CNT_ZERO_BASE);
+	TIM_SetCounter(TIM2, ENC_CNT_ZERO_BASE);
 }
 
 void Enc_Init(void)
@@ -67,25 +69,55 @@ void Enc_Init(void)
 /// @brief calculate a rough RPM from encoder counts
 /// @param speedRPM float array to store the RPM values
 /// @param nowMs current system time in Ms
-/// @note - Assumption: CNT do not ovf (ARR@65536); mind your `ENC_SPEED_SAMP_INTVL_MS`
+/// @note - Assumption: CNT do not ovf or udf (ARR/2@32768); mind your `ENC_SPEED_SAMP_INTVL_MS`
 /// @return - `1` if speed was updated
 /// @return - `0` otherwise
 uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 {
 	static uint32_t s_nextSampMs  = 0;
 
-	uint16_t nowCNT[2];
+	uint16_t nowCNT[2]    = {0, 0};
+	uint16_t deltaCNT[2]  = {0, 0};
+	uint8_t  speedSign[2] = {0, 0};
 	uint32_t elapsedMs = nowMs - s_nextSampMs + ENC_SPEED_SAMP_INTVL_MS;
 	if(nowMs >= s_nextSampMs)
 	{
 		Enc_GetCNT(nowCNT);	// also reset CNT
+		
+		if(nowCNT[0] >= ENC_CNT_ZERO_BASE)
+		{
+			deltaCNT[0] = nowCNT[0] - ENC_CNT_ZERO_BASE;
+			speedSign[0] = 0;
+		}
+		else
+		{
+			deltaCNT[0] = ENC_CNT_ZERO_BASE - nowCNT[0];
+			speedSign[0] = 1;
+		}//L CNT
 
-		speedRPM[0] = (nowCNT[0] /
-					   (ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * (elapsedMs + (nowCNT[0] / 1000))
+		if(nowCNT[1] >= ENC_CNT_ZERO_BASE)
+		{
+			deltaCNT[1] = nowCNT[1] - ENC_CNT_ZERO_BASE;
+			speedSign[1] = 0;
+		}
+		else
+		{
+			deltaCNT[1] = ENC_CNT_ZERO_BASE - nowCNT[1];
+			speedSign[1] = 1;
+		}//R CNT
+
+		speedRPM[0] = (speedSign[0] ? -1 : 1) *
+					  (deltaCNT[0] /
+					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) *
+					    (elapsedMs + (deltaCNT[0] / 1000))
+					   )
 					  ) * 1000 * 60; // L speed
 
-		speedRPM[1] = (nowCNT[1] /
-					   (ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * (elapsedMs + (nowCNT[1] / 1000))
+		speedRPM[1] = (speedSign[1] ? -1 : 1) *
+					  (deltaCNT[1] /
+					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) *
+					    (elapsedMs + (deltaCNT[1] / 1000))
+					   )
 					  ) * 1000 * 60; // R speed
 	    
 		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
