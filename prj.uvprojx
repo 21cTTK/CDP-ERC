@@ -734,6 +734,16 @@
               <FileType>5</FileType>
               <FilePath>.\HW\Enc.h</FilePath>
             </File>
+            <File>
+              <FileName>HW_I2C.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HW\HW_I2C.c</FilePath>
+            </File>
+            <File>
+              <FileName>HW_I2C.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HW\HW_I2C.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
