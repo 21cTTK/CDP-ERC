@@ -2,6 +2,7 @@
 #include "HC05.h"
 #include <string.h>
 #include <stdarg.h>
+#include <math.h>
 
 static char 	HC05_RxPacket[HC05_UART_PACKET_MAXLEN];
 static uint8_t  HC05_RxFlag = 0U;       // `1`: Full Packet received and ready to be read; `0`: No packet received
@@ -19,6 +20,97 @@ static void HC05_SendByte(uint8_t byte)
 {
 	USART_SendData(USART3, byte);
 	while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+}
+
+/// @brief Format a floating-point number as a string up to 7 char long for sending over HC-05
+/// @note - **AI GENERATED**.
+/// @note - used exclusively in @ref `HC05_SendStringFormatted(const char *str_f, ...)` for formatting `%f` values
+///	@note - display is preceded by a '+' or '-' sign; display with minimal digits possible for the input
+/// @param dest "Output" val
+/// @param value input a float value
+static void HC05_FormatFloat7(char *dest, float value)
+{
+    float absVal = fabsf(value);
+    char suffix = '\0';
+
+    if (absVal >= 1000000.0f) {
+        absVal /= 1000000.0f;
+        suffix = 'M';
+    } else if (absVal >= 1000.0f) {
+        absVal /= 1000.0f;
+        suffix = 'K';
+    }
+
+    char sign = (value < 0.0f) ? '-' : '+';
+
+    int decimals;
+
+    if (absVal >= 100.0f)
+        decimals = 1;
+    else if (absVal >= 10.0f)
+        decimals = 2;
+    else if (absVal >= 1.0f)
+        decimals = 3;
+    else
+        decimals = 4;
+
+    uint32_t scale = 1;
+    for (int i = 0; i < decimals; i++)
+        scale *= 10;
+
+    uint32_t scaled = (uint32_t)floorf(absVal * (float)scale + 0.5f);
+
+    uint32_t integerPart = scaled / scale;
+    uint32_t fractionalPart = scaled % scale;
+
+    char *p = dest;
+
+    /* Sign */
+    *p++ = sign;
+
+    /* Integer part */
+    if (integerPart == 0) {
+        *p++ = '0';
+    } else {
+        char temp[10];
+        int count = 0;
+
+        while (integerPart > 0) {
+            temp[count++] = (char)('0' + integerPart % 10);
+            integerPart /= 10;
+        }
+
+        while (count > 0)
+            *p++ = temp[--count];
+    }
+
+    /* Fractional part */
+    if (fractionalPart != 0) {
+        *p++ = '.';
+
+        char *fracStart = p;
+
+        for (int i = decimals - 1; i >= 0; i--) {
+            uint32_t divisor = 1;
+
+            for (int j = 0; j < i; j++)
+                divisor *= 10;
+
+            *p++ = (char)('0' + (fractionalPart / divisor) % 10);
+        }
+
+        while (p > fracStart && p[-1] == '0')
+            --p;
+
+        if (p == fracStart)
+            --p;    /* Remove '.' too */
+    }
+
+    /* Suffix */
+    if (suffix)
+        *p++ = suffix;
+
+    *p = '\0';
 }
 
 /// @brief Format a signed integer as a string up to 5 char long for sending over HC-05
@@ -142,6 +234,17 @@ void HC05_SendStringFormatted(const char *str_f, ...)
 						
 						for (const char *q = valStr; *q != '\0'; q++)
 		                    buffer[end++] = *q;
+
+						break;
+					}
+					case 'f':
+					{
+						float val = va_arg(args, double);
+						char valStr[8];		// 1 * sign char + (decimal pt, K or M magnitude suffix, digits) <= 6 char + 1 * '\0'
+						HC05_FormatFloat7(valStr, val);
+
+						for (const char *q = valStr; *q != '\0'; q++)
+							buffer[end++] = *q;
 
 						break;
 					}

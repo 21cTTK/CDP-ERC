@@ -1,5 +1,21 @@
 #include "stm32f10x.h"
 
+#define ENC_SPEED_SAMP_INTVL_MS  	520
+#define ENC_LINES 			11
+#define ENC_MULT			4	// depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
+#define ENC_GEAR_RATIO  	9.6
+
+/// @brief Read in curr CNT and reset it
+/// @note - used exclusively in @ref `uint16_t Enc_SampleSpeed(uint32_t nowMs)`
+/// @param cnt value storage array
+static void Enc_GetCNT(uint16_t *cnt)
+{
+	cnt[0] = TIM_GetCounter(TIM1);
+	cnt[1] = TIM_GetCounter(TIM2);
+	TIM_SetCounter(TIM1, 0);
+	TIM_SetCounter(TIM2, 0);
+}
+
 void Enc_Init(void)
 {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA|
@@ -48,12 +64,33 @@ void Enc_Init(void)
 	TIM_Cmd(TIM2, ENABLE);
 }
 
-/// @brief Read in curr CNT and reset it
-/// @param cnt value storage array
-void Enc_GetCNT(uint16_t *cnt)
+/// @brief calculate a rough RPM from encoder counts
+/// @param speedRPM float array to store the RPM values
+/// @param nowMs current system time in Ms
+/// @note - Assumption: CNT do not ovf (ARR@65536); mind your `ENC_SPEED_SAMP_INTVL_MS`
+/// @return - `1` if speed was updated
+/// @return - `0` otherwise
+uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 {
-	cnt[0] = TIM_GetCounter(TIM1);
-	cnt[1] = TIM_GetCounter(TIM2);
-	TIM_SetCounter(TIM1, 0);
-	TIM_SetCounter(TIM2, 0);
+	static uint32_t s_nextSampMs  = 0;
+
+	uint16_t nowCNT[2];
+	uint32_t elapsedMs = nowMs - s_nextSampMs + ENC_SPEED_SAMP_INTVL_MS;
+	if(nowMs >= s_nextSampMs)
+	{
+		Enc_GetCNT(nowCNT);	// also reset CNT
+
+		speedRPM[0] = (nowCNT[0] /
+					   (ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * (elapsedMs + (nowCNT[0] / 1000))
+					  ) * 1000 * 60; // L speed
+
+		speedRPM[1] = (nowCNT[1] /
+					   (ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * (elapsedMs + (nowCNT[1] / 1000))
+					  ) * 1000 * 60; // R speed
+	    
+		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
+		return 1;
+	}
+	else
+		return 0;
 }

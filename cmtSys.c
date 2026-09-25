@@ -12,6 +12,8 @@
 #define __TEMP__ENC_MSG_INTVL_MS    1145
 
 static uint32_t __TEMP__nextEncMsgMs;
+static float rawSpeedRPM[2];              // Encoder module:       used to store the speed collected from encoder in RPM
+                                          ///                      @ref `uint8_t Enc_SampleSpeed(uint16_t *speed, uint32_t nowMs)`
 
 void CmtSys_Init()
 {
@@ -49,22 +51,23 @@ void CmtSys_Update()
                                                ///                      @ref @var `HC05_RxFlag`
     char hc05Msg[HC05_UART_PACKET_MAXLEN];     // HC05 module:          
                                                ///                      @ref @var `HC05_RxPacket`
-    uint16_t encCnt[2] = {0,0};                        // Encoder module:       used to store the read-in CNT value
-                                               ///                      @ref `Enc_GetCNT(uint16_t *cnt)`
 
     /* `Update()` Section */
 
     nowMs = CmtSysTim_GetMs();
     Key_GetEvents(keyEvents);
     hc05RxFlag = HC05_GetRxFlag();
+    if(Enc_SampleSpeed(rawSpeedRPM, nowMs) != 0)
+    {
+        // ...pending PID
+    }
 
     LED_CheckFlicker(nowMs);
     
     if(__TEMP__nextEncMsgMs < nowMs)
     {
-		Enc_GetCNT(encCnt);
         HC05_SendString("ENC OUTPUT:\r\n");
-        HC05_SendStringFormatted("ENC:%d,%d.\r\n", encCnt[0], encCnt[1]);
+        HC05_SendStringFormatted("RPM:%f,%f.\r\n", rawSpeedRPM[0], rawSpeedRPM[1]);
         __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
     }
 

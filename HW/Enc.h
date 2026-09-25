@@ -4,6 +4,6 @@
 #include <stdint.h>
 
 void Enc_Init(void);
-void Enc_GetCNT(uint16_t *cnt);
+uint8_t Enc_SampleSpeed(float *speed, uint32_t nowMs);
 
 #endif//__ENC_H
