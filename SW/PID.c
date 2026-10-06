@@ -4,8 +4,17 @@
 #define PID_CLAMP_MIN MOTOR_PWM_DUTY_MIN
 #define PID_CLAMP_MAX MOTOR_PWM_DUTY_MAX
 
-#define PID_KP  0.01f
-#define PID_KI  0.001f
+#define PID_INITIAL_KP  0.1f
+#define PID_INITIAL_KI  0.0f
+
+static float g_Kp;
+static float g_Ki;
+
+void PID_Init(void)
+{
+    g_Kp = PID_INITIAL_KP;
+    g_Ki = PID_INITIAL_KI;
+}
 
 /// @brief 
 /// @param actualRPM
@@ -33,8 +42,8 @@ float* PID_Update(float* actualRPM, float* targetRPM)
 
     //compute control output
     float controlOutPWM[2] = {
-        PID_KP * currError[0] + PID_KI * s_errorInt[0],
-        PID_KP * currError[1] + PID_KI * s_errorInt[1]
+        g_Kp * currError[0] + g_Ki * s_errorInt[0],
+        g_Kp * currError[1] + g_Ki * s_errorInt[1]
     };
 
     //clamp control output to [-100, 100]
@@ -48,4 +57,10 @@ float* PID_Update(float* actualRPM, float* targetRPM)
 
     //return control output
     return controlOutPWM;
+}
+
+void PID_SetGains(float Kp, float Ki)
+{
+    g_Kp = Kp;
+    g_Ki = Ki;
 }

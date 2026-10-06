@@ -27,6 +27,7 @@ void CmtSys_Init()
     Key_Init();
     HC05_Init();
     Enc_Init();
+    PID_Init();
 
     // Init Indicator
     for(int i = 0; i < 5; i++)
@@ -96,7 +97,13 @@ void CmtSys_Update()
         HC05_GetRxPacket(hc05Msg);
         LED_SetFlicker(nowMs, (LEDslot)LED_MSG_RX, 3, 114);
 
-        if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
+        if (strncmp(hc05Msg, "KP+", 3) == 0)
+        {
+            float newKP = HC05_ParseMsgFloat(hc05Msg + 3);
+            PID_SetGains(newKP, 0.0f);
+            HC05_SendString("CMD:\"SET+KP\" - Y - Succeeded\r\n");
+        }
+        else if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
             float speed[] = {314.0f, 314.0f};
             Motion_SetMotion((Motion_t)MOTION_FORWARD, speed, g_targetRPM);

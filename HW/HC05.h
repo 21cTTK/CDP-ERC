@@ -13,6 +13,7 @@ void HC05_SendString(char *String);
 void HC05_SendStringFormatted(const char *str_f, ...);
 uint8_t HC05_GetRxFlag(void);
 void    HC05_GetRxPacket(char *buffer);
+float HC05_ParseMsgFloat(const char *float_str);
 void HC05_ISR(void);
 
 #endif//HC05_H
