@@ -75,12 +75,20 @@ void Enc_Init(void)
 uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 {
 	static uint32_t s_nextSampMs  = 0;
+	static uint8_t  s_firstSample = 1;
 
 	uint16_t nowCNT[2]    = {0, 0};
 	uint16_t deltaCNT[2]  = {0, 0};
 	uint8_t  speedSign[2] = {0, 0};
 	uint32_t elapsedMs = nowMs - s_nextSampMs + ENC_SPEED_SAMP_INTVL_MS;
-	if(nowMs >= s_nextSampMs)
+	if(s_firstSample)
+	{// discard first sample (but still do the routine)
+		Enc_GetCNT(nowCNT);	// also reset CNT
+		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
+		s_firstSample = 0;
+		return 0;
+	}
+	else if(nowMs >= s_nextSampMs)
 	{
 		Enc_GetCNT(nowCNT);	// also reset CNT
 		
