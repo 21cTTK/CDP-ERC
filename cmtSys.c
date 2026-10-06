@@ -159,7 +159,8 @@ void CmtSys_Update()
         }
 		else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
-            Motion_SetMotion((Motion_t)MOTION_STOP, (float *)NULL, g_targetRPM);
+            float speed[] = {0.0f, 0.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+STOP\" - Y - Succeeded\r\n");
