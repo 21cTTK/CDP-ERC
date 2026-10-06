@@ -3,13 +3,13 @@
 #include "cmtSys_TIM.h"
 #include "PID.h"
 
-#define PID_CLAMP_MIN MOTOR_PWM_DUTY_MIN
+#define PID_CLAMP_MIN -MOTOR_PWM_DUTY_MAX
 #define PID_CLAMP_MAX MOTOR_PWM_DUTY_MAX
 #define PID_INT_CLAMP_MIN -110.f / g_Ki
 #define PID_INT_CLAMP_MAX 110.f  / g_Ki
 
 #define PID_INITIAL_KP  0.4f
-#define PID_INITIAL_KI  0.0f
+#define PID_INITIAL_KI  0.03f
 
 /// @brief tolerance below which a target change is treated as "no new command";
 /// @note  the ramp writes its buf back into the last target on every stage, so the equality
@@ -204,15 +204,6 @@ float* PID_Update(float* actualRPM, float* targetRPM)
         g_rampLastTargetRPM[1] - actualRPM[1]
     };
     
-    //integrated error
-    if((targetRPM[0] < 0.1f) && (targetRPM[0] > -0.1f))
-    {
-        s_errorIntRPM[0] = 0.0f;
-    }
-    if((targetRPM[1] < 0.1f) && (targetRPM[1] > -0.1f))
-    {
-        s_errorIntRPM[1] = 0.0f;
-    }
     s_errorIntRPM[0] += currErrorRPM[0];
     s_errorIntRPM[1] += currErrorRPM[1];
 

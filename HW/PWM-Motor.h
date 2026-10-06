@@ -33,6 +33,6 @@ static const Motor_Pin_Struct_t g_MotorPinsDef[MOTOR_PIN_COUNT] =
 void Motor_Init(void);
 void Motor_L_SetSpeed(float perc);
 void Motor_R_SetSpeed(float perc);
-void Motor_SetInput(const uint8_t in[MOTOR_PIN_COUNT]);
+void Motor_SetInput(uint8_t in[MOTOR_PIN_COUNT]);
 
 #endif//__PWM_MOTOR_H
