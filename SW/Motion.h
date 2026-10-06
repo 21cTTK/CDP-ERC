@@ -1,6 +1,8 @@
 #ifndef __MOTION_H
 #define __MOTION_H
 
+#include <stdint.h>
+
 typedef enum __MOTION_ENUM
 {
 	MOTION_STOP = 0,

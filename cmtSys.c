@@ -1,6 +1,7 @@
 #include "stm32f10x.h"                  // Device header
 #include "PWM-Motor.h"
 #include "Motion.h"
+#include "PID.h"
 #include "Delay.h"
 #include "cmtSys_TIM.h"
 #include "LEDs.h"
@@ -24,6 +25,7 @@ void CmtSys_Init()
     Key_Init();
     HC05_Init();
     Enc_Init();
+    PID_Speed_Init();
 
     // Init Indicator
     for(int i = 0; i < 5; i++)
@@ -59,7 +61,7 @@ void CmtSys_Update()
     hc05RxFlag = HC05_GetRxFlag();
     if(Enc_SampleSpeed(rawSpeedRPM, nowMs) != 0)
     {
-        // ...pending PID
+        PID_Speed_Update(rawSpeedRPM, nowMs);
     }
 
     LED_CheckFlicker(nowMs);
@@ -89,6 +91,7 @@ void CmtSys_Update()
         {
             float speed[] = {67.0f, 67.0f};
             Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+            PID_Speed_SetTarget(speed[0], speed[1]);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD\" - Y - Succeeded\r\n");
@@ -97,6 +100,7 @@ void CmtSys_Update()
         {
             float speed[] = {24.0f, 67.0f};
             Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+            PID_Speed_SetTarget(speed[0], speed[1]);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD_LEFT\" - Y - Succeeded\r\n");
@@ -105,6 +109,7 @@ void CmtSys_Update()
         {
             float speed[] = {67.0f, 24.0f};
             Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+            PID_Speed_SetTarget(speed[0], speed[1]);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD_RIGHT\" - Y - Succeeded\r\n");
@@ -113,6 +118,7 @@ void CmtSys_Update()
         {
             float speed[] = {67.0f, 67.0f};
             Motion_SetMotion((Motion_t)MOTION_BACKWARD, speed);
+            PID_Speed_SetTarget(speed[0], speed[1]);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+BACKWARD\" - Y - Succeeded\r\n");
@@ -121,6 +127,7 @@ void CmtSys_Update()
         {
             float speed[] = {66.0f, 67.0f};
             Motion_SetMotion((Motion_t)MOTION_LEFT, speed);
+            PID_Speed_SetTarget(speed[0], speed[1]);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+LEFT\" - Y - Succeeded\r\n");
@@ -129,6 +136,7 @@ void CmtSys_Update()
         {
             float speed[] = {66.0f, 67.0f};
             Motion_SetMotion((Motion_t)MOTION_RIGHT, speed);
+            PID_Speed_SetTarget(speed[0], speed[1]);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+RIGHT\" - Y - Succeeded\r\n");
@@ -136,6 +144,7 @@ void CmtSys_Update()
 		else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
             Motion_SetMotion((Motion_t)MOTION_STOP, (float *)NULL);
+            PID_Speed_SetTarget(0.0f, 0.0f);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+STOP\" - Y - Succeeded\r\n");
