@@ -22,13 +22,20 @@ void Motion_Init(void)
 /// @brief set the motion of the robot
 /// @param motion the motion to set; can be any of the values in Motion_t
 /// @param argv the speed percentage arguments for the motion; its meaning varies across different motions
-void Motion_SetMotion(Motion_t motion, float *argv)
+/// @param targetRPM the target RPM for the motion
+void Motion_SetMotion(Motion_t motion, float *argv, float *targetRPM)
 {
     /* Set Input */
     Motor_SetInput(g_MotionPinsCFG[(uint8_t)motion]);
 
-    /* Set Speed */
+    /* Record target RPM */
+	targetRPM[0] = argv[0];
+	targetRPM[1] = argv[1];
+}
 
-	Motor_L_SetSpeed(argv[0]);
-	Motor_R_SetSpeed(argv[1]);
+void Motion_SetSpeed(float *argv)
+{
+    /* Set Speed */
+    Motor_L_SetSpeed(argv[0]);
+    Motor_R_SetSpeed(argv[1]);
 }

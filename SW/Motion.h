@@ -12,6 +12,7 @@ typedef enum __MOTION_ENUM
 } Motion_t;
 
 void Motion_Init(void);
-void Motion_SetMotion(Motion_t motion, float *argv);
+void Motion_SetMotion(Motion_t motion, float *argv, float *targetRPM);
+void Motion_SetSpeed(float *argv);
 
 #endif//__MOTION_H

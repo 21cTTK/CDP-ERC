@@ -1,9 +1,6 @@
 #include "stm32f10x.h"                  // Device header
 #include "PWM-Motor.h"
 
-static uint16_t Motor_L_Speed;
-static uint16_t Motor_R_Speed;
-
 /* Helper Functions */
 
 // none as to now...

@@ -769,6 +769,16 @@
               <FileType>5</FileType>
               <FilePath>.\SW\Motion.h</FilePath>
             </File>
+            <File>
+              <FileName>PID.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SW\PID.c</FilePath>
+            </File>
+            <File>
+              <FileName>PID.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SW\PID.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

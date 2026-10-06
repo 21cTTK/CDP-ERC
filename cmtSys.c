@@ -7,13 +7,16 @@
 #include "Keys.h"
 #include "HC05.h"
 #include "Enc.h"
+#include "PID.h"
 #include <string.h>
 
 #define __TEMP__ENC_MSG_INTVL_MS    1145
 
 static uint32_t __TEMP__nextEncMsgMs;
-static float rawSpeedRPM[2];              // Encoder module:       used to store the speed collected from encoder in RPM
-                                          ///                      @ref `uint8_t Enc_SampleSpeed(uint16_t *speed, uint32_t nowMs)`
+static float g_actualRPM[2];                // Encoder module:       used to store the speed collected from encoder in RPM
+                                            ///                      @ref `uint8_t Enc_SampleSpeed(uint16_t *speed, uint32_t nowMs)`
+static float g_targetRPM[2];                // Motion, PID module:   used to store the target RPM for the motion
+                                            ///                      @ref `void Motion_SetMotion(Motion_t motion, float *argv, float *g_targetRPM)`
 
 void CmtSys_Init()
 {
@@ -51,23 +54,31 @@ void CmtSys_Update()
                                                ///                      @ref @var `HC05_RxFlag`
     char hc05Msg[HC05_UART_PACKET_MAXLEN];     // HC05 module:          
                                                ///                      @ref @var `HC05_RxPacket`
+    float controlledPWM[2];                    // PID module:           used to store the control output from PID_Update()
+                                               ///                      @ref `float* PID_Update(float* actualRPM, float* targetRPM)`
 
     /* `Update()` Section */
 
     nowMs = CmtSysTim_GetMs();
     Key_GetEvents(keyEvents);
     hc05RxFlag = HC05_GetRxFlag();
-    if(Enc_SampleSpeed(rawSpeedRPM, nowMs) != 0)
+    if(Enc_SampleSpeed(g_actualRPM, nowMs) != 0)
     {
-        // ...pending PID
+        float *value = PID_Update(g_actualRPM, g_targetRPM);
+        
+        controlledPWM[0] = value[0];
+        controlledPWM[1] = value[1];
+        Motion_SetSpeed(controlledPWM);
     }
 
     LED_CheckFlicker(nowMs);
     
     if(__TEMP__nextEncMsgMs < nowMs)
     {
-        HC05_SendString("ENC OUTPUT:\r\n");
-        HC05_SendStringFormatted("RPM:%f,%f.\r\n", rawSpeedRPM[0], rawSpeedRPM[1]);
+        HC05_SendString("\r\n");
+        HC05_SendStringFormatted("PWM:%f,%f.\r\n"   , controlledPWM[0], controlledPWM[1]);
+        HC05_SendStringFormatted("actual:%f,%f.\r\n", g_actualRPM[0], g_actualRPM[1]);
+        HC05_SendStringFormatted("target:%f,%f.\r\n", g_targetRPM[0], g_targetRPM[1]);
         __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
     }
 
@@ -87,32 +98,32 @@ void CmtSys_Update()
 
         if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
-            float speed[] = {67.0f, 67.0f};
-            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+            float speed[] = {314.0f, 314.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD\" - Y - Succeeded\r\n");
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD_LEFT") == 0)
         {
-            float speed[] = {24.0f, 67.0f};
-            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+            float speed[] = {114.0f, 314.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD_LEFT\" - Y - Succeeded\r\n");
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD_RIGHT") == 0)
         {
-            float speed[] = {67.0f, 24.0f};
-            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed);
+            float speed[] = {314.0f, 1144.0f};
+            Motion_SetMotion((Motion_t)MOTION_FORWARD, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD_RIGHT\" - Y - Succeeded\r\n");
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
-            float speed[] = {67.0f, 67.0f};
-            Motion_SetMotion((Motion_t)MOTION_BACKWARD, speed);
+            float speed[] = {314.0f, 314.0f};
+            Motion_SetMotion((Motion_t)MOTION_BACKWARD, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+BACKWARD\" - Y - Succeeded\r\n");
@@ -120,7 +131,7 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+LEFT") == 0)
         {
             float speed[] = {66.0f, 67.0f};
-            Motion_SetMotion((Motion_t)MOTION_LEFT, speed);
+            Motion_SetMotion((Motion_t)MOTION_LEFT, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+LEFT\" - Y - Succeeded\r\n");
@@ -128,14 +139,14 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+RIGHT") == 0)
         {
             float speed[] = {66.0f, 67.0f};
-            Motion_SetMotion((Motion_t)MOTION_RIGHT, speed);
+            Motion_SetMotion((Motion_t)MOTION_RIGHT, speed, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+RIGHT\" - Y - Succeeded\r\n");
         }
 		else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
-            Motion_SetMotion((Motion_t)MOTION_STOP, (float *)NULL);
+            Motion_SetMotion((Motion_t)MOTION_STOP, (float *)NULL, g_targetRPM);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+STOP\" - Y - Succeeded\r\n");
