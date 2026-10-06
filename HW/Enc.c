@@ -1,6 +1,6 @@
 #include "stm32f10x.h"
 
-#define ENC_SPEED_SAMP_INTVL_MS  	520
+#define ENC_SPEED_SAMP_INTVL_MS  	52
 #define ENC_CNT_ZERO_BASE   32768 // 1<<15
 #define ENC_LINES 			11
 #define ENC_MULT			4	  // depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
@@ -108,16 +108,12 @@ uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 
 		speedRPM[0] = (speedSign[0] ? -1 : 1) *
 					  (deltaCNT[0] /
-					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) *
-					    (elapsedMs + (deltaCNT[0] / 1000))
-					   )
+					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) *elapsedMs)
 					  ) * 1000 * 60; // L speed
 
 		speedRPM[1] = (speedSign[1] ? -1 : 1) *
 					  (deltaCNT[1] /
-					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) *
-					    (elapsedMs + (deltaCNT[1] / 1000))
-					   )
+					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * elapsedMs)
 					  ) * 1000 * 60; // R speed
 	    
 		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
