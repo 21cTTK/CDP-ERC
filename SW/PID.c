@@ -1,13 +1,13 @@
 #include "stm32f10x.h"                  // Device header
 #include "PWM-Motor.h"
 
-#define PID_CLAMP_MIN MOTOR_PWM_DUTY_MIN
+#define PID_CLAMP_MIN -MOTOR_PWM_DUTY_MAX
 #define PID_CLAMP_MAX MOTOR_PWM_DUTY_MAX
 #define PID_INT_CLAMP_MIN -110.f / g_Ki
 #define PID_INT_CLAMP_MAX 110.f  / g_Ki
 
 #define PID_INITIAL_KP  0.4f
-#define PID_INITIAL_KI  0.0f
+#define PID_INITIAL_KI  0.03f
 
 static float g_Kp;
 static float g_Ki;
