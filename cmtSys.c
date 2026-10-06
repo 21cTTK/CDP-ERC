@@ -100,8 +100,14 @@ void CmtSys_Update()
         if (strncmp(hc05Msg, "KP+", 3) == 0)
         {
             float newKP = HC05_ParseMsgFloat(hc05Msg + 3);
-            PID_SetGains(newKP, 0.0f);
-            HC05_SendString("CMD:\"SET+KP\" - Y - Succeeded\r\n");
+            PID_SetGains(newKP, -1.0f);
+            HC05_SendStringFormatted("CMD:\"SET+KP\" - Y - KP=%f\r\n", newKP);
+        }
+        else if (strncmp(hc05Msg, "KI+", 3) == 0)
+        {
+            float newKI = HC05_ParseMsgFloat(hc05Msg + 3);
+            PID_SetGains(-1.0f, newKI);
+            HC05_SendStringFormatted("CMD:\"SET+KI\" - Y - KI=%f\r\n", newKI);
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {

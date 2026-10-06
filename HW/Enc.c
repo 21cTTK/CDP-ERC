@@ -1,10 +1,12 @@
 #include "stm32f10x.h"
 
-#define ENC_SPEED_SAMP_INTVL_MS  	52
+#define ENC_SPEED_SAMP_INTVL_MS  	50
 #define ENC_CNT_ZERO_BASE   32768 // 1<<15
 #define ENC_LINES 			11
 #define ENC_MULT			4	  // depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
 #define ENC_GEAR_RATIO  	9.6
+
+volatile uint32_t g_CNT;
 
 /// @brief Read in curr CNT and reset it to `ENC_CNT_ZERO_BASE`.
 /// @note - real CNT ticks are calculated based on delta with `ENC_CNT_ZERO_BASE` to prevent ovf/udf
@@ -91,6 +93,7 @@ uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 	else if(nowMs >= s_nextSampMs)
 	{
 		Enc_GetCNT(nowCNT);	// also reset CNT
+		g_CNT = nowCNT[0];
 		
 		if(nowCNT[0] >= ENC_CNT_ZERO_BASE)
 		{
