@@ -1,10 +1,12 @@
 #include "stm32f10x.h"                  // Device header
+#include "Motion.h"
 #include "PWM-Motor.h"
 
 #define PID_CLAMP_MIN -MOTOR_PWM_DUTY_MAX
 #define PID_CLAMP_MAX MOTOR_PWM_DUTY_MAX
 #define PID_INT_CLAMP_MIN -110.f / g_Ki
 #define PID_INT_CLAMP_MAX 110.f  / g_Ki
+#define PID_RAMP_STEP_SIZE 32.0f
 
 #define PID_INITIAL_KP  0.4f
 #define PID_INITIAL_KI  0.03f
@@ -24,12 +26,35 @@ void PID_Init(void)
     g_Ki = PID_INITIAL_KI;
 }
 
+float* PID_Ramp(float* targetRPM)
+{
+    static float s_currTargetRPM[2] = {0, 0};
+
+    for(int i = 0; i < 2; i++)
+    {
+        if(s_currTargetRPM[i] < targetRPM[i])
+        {//forward ramping
+            s_currTargetRPM[i] += PID_RAMP_STEP_SIZE;
+            if(s_currTargetRPM[i] > targetRPM[i])
+                s_currTargetRPM[i] = targetRPM[i];
+        }
+        else if(s_currTargetRPM[i] > targetRPM[i])
+        {//backward ramping
+            s_currTargetRPM[i] -= PID_RAMP_STEP_SIZE;
+            if(s_currTargetRPM[i] < targetRPM[i])
+                s_currTargetRPM[i] = targetRPM[i];
+        }
+    }
+
+    return s_currTargetRPM;
+}
+
 /// @brief 
 /// @param actualRPM
 /// @param targetRPM
 /// @note - update interval matches that of @ref ENC_SPEED_SAMP_INTVL_MS 
 /// @return - control output float array
-float* PID_Update(float* actualRPM, float* targetRPM)
+float* PID_Update(float* actualRPM, float* targetRPM, float isStop)
 {
     static float s_prevError[2] = {0, 0};
     static float s_errorIntRPM[2] = {0, 0};
@@ -39,7 +64,13 @@ float* PID_Update(float* actualRPM, float* targetRPM)
         targetRPM[0] - actualRPM[0],
         targetRPM[1] - actualRPM[1]
     };
-    
+
+    //if isStop is true, reset the integrated error
+    if (Motion_IsStopped() == 1) {
+        s_errorIntRPM[0] = 0.0f;
+        s_errorIntRPM[1] = 0.0f;
+    }
+
     //integrated error
     s_errorIntRPM[0] += currErrorRPM[0];
     s_errorIntRPM[1] += currErrorRPM[1];
@@ -56,9 +87,9 @@ float* PID_Update(float* actualRPM, float* targetRPM)
         s_errorIntRPM[1] = PID_INT_CLAMP_MIN;
     }
 
-    //save prev error for next iteration
-    s_prevError[0] = currErrorRPM[0];
-    s_prevError[1] = currErrorRPM[1];
+//    //save prev error for next iteration
+//    s_prevError[0] = currErrorRPM[0];
+//    s_prevError[1] = currErrorRPM[1];
 
     //compute control output
     float controlOutPWM[2] = {
