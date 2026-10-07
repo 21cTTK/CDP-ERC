@@ -18,6 +18,7 @@
 #define ENC_IC_CNT_MOD          1000U							// TIM3 `CNT` modulus (ARR+1); `CNT` wraps at 1000
 #define ENC_IC_PULSES_PER_REV   (ENC_LINES * ENC_GEAR_RATIO)	// signal periods per output-shaft rev, ONE channel
 #define ENC_IC_MIN_HALF_TICKS   40U								// [ticks] shorter edge spacing is noise, not an edge
+#define ENC_IC_SYNC_TRIES       8U								// [#] max `CNT`/wrap-flag resamples per `Enc_ISR()` pass
 
 volatile uint32_t g_CNT;
 
@@ -437,13 +438,18 @@ uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 
 /// @brief TIM3 ISR body: CH1/CH2 pulse-width captures and `CNT` wrap accounting.
 /// @note - called from @ref `TIM3_IRQHandler()` in `stm32f10x_it.c`
+/// @note - this runs on every edge, so the registers are touched directly instead of through
+///         the SPL: the SPL accessors are out-of-line calls whose overhead made the
+///         `CNT`/flag sampling window as long as the 1 us tick itself
 void Enc_ISR(void)
 {
+	uint16_t sr = TIM3->SR;		// one snapshot decides which sources are pending
 	uint16_t cap[2] = {0, 0};
-	uint16_t cntNow;
+	uint16_t cntNow = 0U;
 	uint16_t cntCheck;
-	uint8_t  uifPending;
+	uint8_t  uifPending = 0U;
 	uint8_t  captured = 0U;
+	uint8_t  tries;
 
 	/* Latch the pending captures first: `CCRx` is read (and only then cleared) while its
 	 * flag is set, and before the `CNT` snapshot below -- `Enc_ICLatch()` decides "edge
@@ -465,23 +471,29 @@ void Enc_ISR(void)
 		captured |= 2U;
 	}
 
-	/* `CNT` and the wrap flag it is judged against must come from ONE consistent sample:
-	 * this retry only exits once `CNT` did not tick across the sequence, which proves that
-	 * no wrap can have slipped in between the two reads and invalidated the `cap > cntNow`
-	 * test of `Enc_ICLatch()`. (`CNT` ticks once per us, so it settles in an iteration or
-	 * two.) */
-	do
+	/* `CNT` and its pending-wrap flag must be sampled as ONE consistent pair: the retry
+	 * stops once `CNT` did not wrap across the sequence, which proves that no wrap slipped
+	 * in between the two reads and invalidated the `cap > cntNow` test of `Enc_ICLatch()`.
+	 * A plain tick in between is harmless -- only a wrap (999 -> 0, i.e. the second read
+	 * coming back lower) can change the meaning of the wrap flag, so that is all this tests
+	 * for. Reading `TIM3->CNT`/`TIM3->SR` directly keeps the window at a few cycles, so a
+	 * retry is a ~1e-4 event. The retry is bounded regardless: with the core halted in the
+	 * debugger TIM3 keeps counting, and a bounded loop then costs one ambiguous interval
+	 * instead of trapping the ISR forever. */
+	for(tries = 0U; tries < ENC_IC_SYNC_TRIES; tries++)
 	{
-		cntNow     = TIM_GetCounter(TIM3);
-		uifPending = (uint8_t)(TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET);
-		cntCheck   = TIM_GetCounter(TIM3);
-	} while(cntCheck != cntNow);
+		cntNow     = TIM3->CNT;
+		uifPending = (uint8_t)((TIM3->SR & TIM_SR_UIF) != 0U);
+		cntCheck   = TIM3->CNT;
+		if(cntCheck >= cntNow)	// no wrap across the sequence
+			break;
+	}
 
 	/* A `CNT` wrap (`ENC_IC_CNT_MOD` ticks = 1 ms @ 1 us/tick) is the high word of the IC
 	 * time base: it MUST be counted before the captures are stamped below. */
 	if(uifPending != 0U)
 	{
-		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+		TIM3->SR = (uint16_t)~TIM_SR_UIF;
 		s_icWrapCnt++;
 	}
 
