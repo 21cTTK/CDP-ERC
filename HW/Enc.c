@@ -22,14 +22,15 @@ static void Enc_GetCNT(uint16_t *cnt)
 
 void Enc_Init(void)
 {
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA|
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA |
 						   RCC_APB2Periph_TIM1, ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 |
+						   RCC_APB1Periph_TIM3, ENABLE);
 
-	//GPIO - PA0--TIM2_CH1, PA1--TIM2_CH2; PA8--TIM1_CH1, PA9--TIM1_CH2
+	//GPIO - PA0--TIM2_CH1, PA1--TIM2_CH2; PA8--TIM1_CH1, PA9--TIM1_CH2, PB6--TIM3_CH1, PB7--TIM3_CH2
 	GPIO_InitTypeDef gpio;
 	gpio.GPIO_Mode = GPIO_Mode_IPU;
-	gpio.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_8 | GPIO_Pin_9;
+	gpio.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_6 | GPIO_Pin_7;
 	gpio.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &gpio);
 
@@ -37,7 +38,7 @@ void Enc_Init(void)
 	TIM_InternalClockConfig(TIM1);
 	TIM_InternalClockConfig(TIM2);
 
-	//Timebase Unit
+	//Timebase Unit for Encoder(TIM1,2)
 	TIM_TimeBaseInitTypeDef timeBase;				
 	timeBase.TIM_ClockDivision = TIM_CKD_DIV1;     
 	timeBase.TIM_CounterMode = TIM_CounterMode_Up; 
@@ -47,7 +48,16 @@ void Enc_Init(void)
 	TIM_TimeBaseInit(TIM1, &timeBase);
 	TIM_TimeBaseInit(TIM2, &timeBase);
 
-	//TIM IC
+	//Timebase Unit for IC(TIM3); SHOULD set as per PWM-Motor.c
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
+	TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInitStructure.TIM_Period = 1000U - 1U;				//ARR
+	TIM_TimeBaseInitStructure.TIM_Prescaler = 72U - 1U;				//PSC
+	TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0U;
+	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStructure);
+
+	//TIM IC for Encoder(TIM1,2)
 	TIM_ICInitTypeDef timIC;
 	TIM_ICStructInit(&timIC); // fill with default values
 	timIC.TIM_Channel = TIM_Channel_1;
@@ -59,6 +69,14 @@ void Enc_Init(void)
 	TIM_ICInit(TIM1, &timIC);
 	TIM_ICInit(TIM2, &timIC);
 
+	//TIM IC for IC(TIM3); reuses Encoder's
+	TIM_ICInit(TIM3, &timIC);
+
+	//TIM IC(TIM3)
+	TIM_SelectInputTrigger(TIM3, TIM_TS_TI1FP1);
+	TIM_SelectInputTrigger(TIM3, TIM_TS_TI2FP2);
+	TIM_SelectMasterSlaveMode(TIM3, TIM_MasterSlaveMode_Disable);	// must DISABLE slave mode so CNT runs like normal
+
 	//TIM Encoder Interface
 	TIM_EncoderInterfaceConfig(TIM1, TIM_EncoderMode_TI12, TIM_ICPolarity_Rising, TIM_ICPolarity_Rising);
 	TIM_EncoderInterfaceConfig(TIM2, TIM_EncoderMode_TI12, TIM_ICPolarity_Rising, TIM_ICPolarity_Rising);
@@ -66,6 +84,7 @@ void Enc_Init(void)
 	//TIM EN
 	TIM_Cmd(TIM1, ENABLE);
 	TIM_Cmd(TIM2, ENABLE);
+	TIM_Cmd(TIM3, ENABLE);
 }
 
 /// @brief calculate a rough RPM from encoder counts
