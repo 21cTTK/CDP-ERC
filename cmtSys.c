@@ -10,7 +10,7 @@
 #include "PID.h"
 #include <string.h>
 
-#define __TEMP__ENC_MSG_INTVL_MS    1145
+#define __TEMP__ENC_MSG_INTVL_MS    114
 
 volatile float currRamp;
 
@@ -80,10 +80,7 @@ void CmtSys_Update()
     
     if(__TEMP__nextEncMsgMs < nowMs)
     {
-        HC05_SendString("\r\n");
-        HC05_SendStringFormatted("PWM:%f,%f.\r\n"   , controlledPWM[0], controlledPWM[1]);
-        HC05_SendStringFormatted("actual:%f,%f.\r\n", g_actualRPM[0], g_actualRPM[1]);
-        HC05_SendStringFormatted("target:%f,%f.\r\n", g_targetRPM[0], g_targetRPM[1]);
+        HC05_SendStringFormatted("%f,%f,%f\r\n", g_actualRPM[0], g_targetRPM[0], controlledPWM[0]);
         __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
     }
 

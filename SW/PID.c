@@ -8,8 +8,8 @@
 #define PID_INT_CLAMP_MAX 110.f  / g_Ki
 #define PID_RAMP_STEP_SIZE 32.0f
 
-#define PID_INITIAL_KP  0.4f
-#define PID_INITIAL_KI  0.03f
+#define PID_INITIAL_KP  0.5f
+#define PID_INITIAL_KI  0.12f
 
 static float g_Kp;
 static float g_Ki;
@@ -118,8 +118,8 @@ float* PID_Update(float* actualRPM, float* targetRPM, float isStop)
 
 void PID_SetGains(float Kp, float Ki)
 {
-    if(Kp > 0.0f)
+    if(Kp >= 0.0f)
         g_Kp = Kp;
-    if(Ki > 0.0f)
+    if(Ki >= 0.0f)
         g_Ki = Ki;
 }
