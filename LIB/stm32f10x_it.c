@@ -26,6 +26,7 @@
 #include "cmtSys_TIM.h"
 #include "Keys.h"
 #include "HC05.h"
+#include "Enc.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
@@ -153,6 +154,13 @@ void TIM4_IRQHandler(void)
     TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
     CmtSysTim_ISR();
   }
+}
+
+/* TIM3: encoder pulse-width input capture (CH1/CH2) + CNT wrap accounting;
+   both flags are serviced inside Enc_ISR() */
+void TIM3_IRQHandler(void)
+{
+  Enc_ISR();
 }
 
 void EXTI4_IRQHandler(void)
