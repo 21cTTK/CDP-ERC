@@ -1,6 +1,9 @@
 #ifndef __PWM_MOTOR_H
 #define __PWM_MOTOR_H
 
+#define MOTOR_PWM_DUTY_MAX 100.0f
+#define MOTOR_PWM_DUTY_MIN 0.0f
+
 // Motor Pin Definitions
 
 typedef enum __MOTOR_PIN_DEF_ENUM
@@ -30,6 +33,6 @@ static const Motor_Pin_Struct_t g_MotorPinsDef[MOTOR_PIN_COUNT] =
 void Motor_Init(void);
 void Motor_L_SetSpeed(float perc);
 void Motor_R_SetSpeed(float perc);
-void Motor_SetInput(const uint8_t in[MOTOR_PIN_COUNT]);
+void Motor_SetInput(uint8_t in[MOTOR_PIN_COUNT]);
 
 #endif//__PWM_MOTOR_H

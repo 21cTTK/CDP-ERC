@@ -1,9 +1,6 @@
 #include "stm32f10x.h"                  // Device header
 #include "PWM-Motor.h"
 
-static uint16_t Motor_L_Speed;
-static uint16_t Motor_R_Speed;
-
 /* Helper Functions */
 
 // none as to now...
@@ -79,7 +76,7 @@ void Motor_R_SetSpeed(float perc)
 
 /// @brief set TB6612FNG AIN/BIN pins to control the direction of the motor
 /// @param in an arr containing the input values for the motor pins; should be of size `MOTOR_PIN_COUNT`
-void Motor_SetInput(const uint8_t in[MOTOR_PIN_COUNT])
+void Motor_SetInput(uint8_t in[MOTOR_PIN_COUNT])
 {
 	for (int i = 0; i < MOTOR_PIN_COUNT; i++)
 	{

@@ -286,6 +286,55 @@ void HC05_GetRxPacket(char *buffer)
 	}
 }
 
+/// @brief Parse a plain unsigned decimal number (`0.91`, `11.45`, ...) received over HC-05
+/// @note - **AI GENERATED**.
+/// @note - accepted grammar: `DIGIT+ [ '.' DIGIT+ ]`; no sign, no magnitude suffix, no blanks
+/// @note - deliberately not `atof`/`strtod`: MicroLIB doesn't support float input, and the full
+///         conversion routine would drag in far more code than this loop
+/// @note - parsing stops at the first char that is neither a digit nor '.'; if no digit is seen
+///         at all, `0.0f` is returned
+/// @param float_str string holding the number; packet head/tail must already be stripped
+/// @return the parsed value
+float HC05_ParseMsgFloat(const char *float_str)
+{
+	float floatVal = 0.0f;
+
+	if (float_str == NULL)
+		return 0.0f;
+
+	const char *p = float_str;
+
+	/* Integer part */
+	uint32_t intPart = 0u;
+	while (*p >= '0' && *p <= '9')
+	{
+		if (intPart < 1000000u)		// guard against a malformed runaway payload
+			intPart = intPart * 10u + (uint32_t)(*p - '0');
+		p++;
+	}
+
+	/* Fractional part; digits past 6 decimals are consumed but dropped */
+	uint32_t fracPart = 0u;
+	uint32_t scale = 1u;
+	if (*p == '.')
+	{
+		p++;
+		while (*p >= '0' && *p <= '9')
+		{
+			if (scale < 1000000u)
+			{
+				fracPart = fracPart * 10u + (uint32_t)(*p - '0');
+				scale *= 10u;
+			}
+			p++;
+		}
+	}
+
+	floatVal = (float)intPart + (float)fracPart / (float)scale;
+
+	return floatVal;
+}
+
 void HC05_ISR(void)
 {
 	static HC05_RxState s_RxState = HC05_RX_STATE_PENDING_HEADER; // Rx state machine
