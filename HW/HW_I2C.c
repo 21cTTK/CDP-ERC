@@ -42,14 +42,13 @@ typedef enum __HW_I2C_RETURN_CODES_ENUM
 } HW_I2C_RetDef_t;
 
 static uint16_t g_errReg;           //!< 16-bit error register of I2C module for debugging; see @ref __HW_I2C_ERROR_ENUM for bitfield info
-static uint8_t  g_priErr;           //!< primary error register
-static uint8_t  g_HW_I2C_isInit;    //!< `1` if HW_I2C module is initialized; `0` otherwise
+static uint8_t  g_priErr;           //!< primary error register. stores the first "culprit" error
+static uint8_t  g_HW_I2C_hasInit;    //!< `1` if HW_I2C module is initialized; `0` otherwise
 
 /* I2C module Error Handlers */
     
 static HW_I2C_RetDef_t HW_I2C_AssertFailure(HW_I2C_errorsDef_t error);
 static HW_I2C_RetDef_t HW_I2C_AssertCleared(HW_I2C_errorsDef_t error);
-static uint8_t         HW_I2C_hasError(HW_I2C_errorsDef_t error);
 
 /// @brief write errors to `g_errReg` and return @ref HW_I2C_FAILURE indicating the caller function failed
 /// @param error error bitfield to set. can be any combination of @ref __HW_I2C_ERROR_ENUM enum-macro
@@ -282,7 +281,7 @@ okk:
 /// @return - @ref HW_I2C_FAILURE if failed; set @ref HW_I2C_ERROR_REINIT_FAILED thru @ref HW_I2C_AssertFailure
 static HW_I2C_RetDef_t HW_I2C_Reinit(void)
 {
-	g_HW_I2C_isInit = 0U;
+	g_HW_I2C_hasInit = 0U;
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB |
                            RCC_APB2Periph_AFIO, ENABLE);
@@ -341,10 +340,10 @@ static HW_I2C_RetDef_t HW_I2C_Reinit(void)
 // legit single-exit goto lines for error handling im not abusing goto here do not call the police
 
 err:
-    g_HW_I2C_isInit = 0U;
+    g_HW_I2C_hasInit = 0U;
     return HW_I2C_AssertFailure(HW_I2C_ERROR_REINIT_FAILED);    // Reinit failed
 okk:
-    g_HW_I2C_isInit = 1U;
+    g_HW_I2C_hasInit = 1U;
     return HW_I2C_AssertCleared(HW_I2C_ERROR_REINIT_FAILED);    // Reinit succeeded
 }
 
@@ -450,7 +449,7 @@ static HW_I2C_RetDef_t HW_I2C_SendByte(uint8_t value)
 /// @return - boolean `1` if failed
 uint8_t HW_I2C_Init(void)
 {
-	if ((g_HW_I2C_isInit == 0U) ||
+	if ((g_HW_I2C_hasInit == 0U) ||
 		(HW_I2C_WaitBusFree() == HW_I2C_FAILURE))
 	{
         if (HW_I2C_Reinit() == HW_I2C_FAILURE)
@@ -472,10 +471,11 @@ uint8_t HW_I2C_Init(void)
 /// @param addr7 7-bit address to transmit to
 /// @param data Pointer to data buffer
 /// @param len Length of data to transmit
+/// @note - Can use this fn independently but recommended to add some wrapper like @ref HW_I2C_WriteReg1Byte and call the wrapper instead
 /// @note - `len == 0` is legal and then @p data may be `0`: only the address (+ STOP) is sent, may be used to probe whether a slave answers
 /// @return - boolean `0` if successful
 /// @return - boolean `1` if failed; set @ref HW_I2C_ERROR_TX_FAILED
-uint8_t HW_I2C_MasterTx(uint8_t addr7, const uint8_t *data, uint16_t len)
+uint8_t HW_I2C_MasterTx(uint8_t addr7, uint8_t *data, uint16_t len)
 {
     uint16_t index;
 
@@ -522,7 +522,8 @@ okk:
 
 /// @brief I2C Master Receive
 /// @details - The fn follows the Master Rx Method2 described in RM0008 p.761-764
-/// @note - This also specifies the Reg addr, since an I2C register read always starts with a write of @p reg
+/// @note - This fn also specifies the Reg addr, since an I2C register read always starts with a write of @p reg
+/// @note - Can use this fn independently but recommended to add some wrapper like @ref HW_I2C_ReadReg1Byte and call the wrapper instead
 /// @param addr7 7-bit address to receive from
 /// @param reg Register address to read from
 /// @param data Pointer to data buffer
@@ -713,9 +714,46 @@ okk:
     return 0U; // Reception succeeded
 }
 
+/// @brief Write a single byte to a specified reg of a certain device; Wraps @ref HW_I2C_MasterTx
+/// @param addr7 7-bit address to transmit to
+/// @param reg Register address to write to
+/// @param byte Data byte to write
+/// @return passes the return value of @ref HW_I2C_MasterTx
+/// @return - boolean `0` if successful
+/// @return - boolean `1` if failed;
+uint8_t HW_I2C_WriteReg1Byte(uint8_t addr7, uint8_t reg, uint8_t byte)
+{
+    uint8_t payload[2];
+
+    payload[0] = reg;
+    payload[1] = byte;
+
+    return HW_I2C_MasterTx(addr7, payload, 2);
+}
+
+/// @brief Read a single byte from a specified reg of a certain device; Wraps @ref HW_I2C_ReadReg
+/// @param addr7 7-bit address to receive from
+/// @param reg Register address to read from
+/// @param data Pointer to data buffer
+/// @param len Length of data to receive
+/// @return directly passes the return value of @ref HW_I2C_MasterRx
+/// @return - boolean `0` if successful
+/// @return - boolean `1` if failed; set @ref HW_I2C_ERROR_RX_FAILED
+uint8_t HW_I2C_ReadReg1Byte(uint8_t addr7, uint8_t reg, uint8_t *byte)
+{
+    return HW_I2C_MasterRx(addr7, reg, byte, 1);
+}
+
+/// @brief Check if the HW I2C module has been initialized
+/// @return boolean `1` if initialized, `0` otherwise
+uint8_t HW_I2C_HasInitialized(void)
+{
+    return g_HW_I2C_hasInit;
+}
+
 /// @brief Check I2C errors for external use, store them and clear them right after. `Update()` fn of HW I2C module
 /// @note - this fn should be called at the end of a round, i.e., after I2C module's other actions in the main loop 
-/// @details the fn first latches the peripheral faults, then snapshots and reports the error vector of the round, and then resets @ref g_errReg to @ref HW_I2C_ERROR_NONE
+/// @details the fn first latches the peripheral faults, then snapshots and reports the error vector of the round, and then resets @ref g_errReg and @ref g_priErr to @ref HW_I2C_ERROR_NONE
 /// @param nowMs: Current timestamp in milliseconds
 void HW_I2C_UpdateError(uint32_t nowMs)
 {
@@ -743,4 +781,5 @@ void HW_I2C_UpdateError(uint32_t nowMs)
 
     // clear error vector after reporting
     (void)HW_I2C_AssertCleared(pendingErrors);
+    (void)HW_I2C_AssertCleared(g_priErr);
 }
