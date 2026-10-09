@@ -9,6 +9,7 @@ typedef enum __LEDS_DEF_ENUM
 	LED_MAIN = 0, 	// Used for: Loop Indicator, Init Indicator
 	LED_MSG_RX,    	// Used for: RC module msg received indicator
 	LED_CMD_EXEC,  	// Used for: RC module cmd executed indicator
+	LED_I2C_ERROR,  // Used for: I2C error indicator
 	LED_COUNT		// should match the number of used LEDs
 } LEDslot;
 

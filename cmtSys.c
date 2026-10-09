@@ -7,6 +7,8 @@
 #include "Keys.h"
 #include "HC05.h"
 #include "Enc.h"
+#include "MPU6050.h"
+#include "HW_I2C.h"
 #include "PID.h"
 #include <string.h>
 
@@ -23,12 +25,26 @@ static float g_targetRPM[2];                // Motion, PID module:   used to sto
 void CmtSys_Init()
 {
     /* Module Init */
+    /**
+     * ## Init/inclusion hierarchy
+     * 
+     * - Motion.h
+     *  - PWM-Motor.h
+     * - LED.h
+     * - Key.h
+     * - HC05.h
+     * - Enc.h
+     * - MPU6050.h
+     *  - HW_I2C.h
+     * - cmtSys.h
+     */
     
     Motion_Init();
     LED_Init();
     Key_Init();
     HC05_Init();
     Enc_Init();
+    MPU6050_Init();
     PID_Init();
 
     // Init Indicator
@@ -50,15 +66,13 @@ void CmtSys_Update()
 {
     /* Forward Decl Section */
     
-    uint32_t nowMs;                            // cmtSys_TIM module:    system time
-    uint8_t keyEvents[KEY_EV_COUNT];           // Keys module:
-                                               ///                      @ref @var `g_CurrKeyEV[KEY_EV_COUNT]`
-    uint8_t hc05RxFlag;                        // HC05 module:          
-                                               ///                      @ref @var `HC05_RxFlag`
-    char hc05Msg[HC05_UART_PACKET_MAXLEN];     // HC05 module:          
-                                               ///                      @ref @var `HC05_RxPacket`
-    float controlledPWM[2];                    // PID module:           used to store the control output from PID_Update()
-                                               ///                      @ref `float* PID_Update(float* actualRPM, float* targetRPM)`
+    uint32_t nowMs;                             //!< cmtSys_TIM module: provides system time
+    uint16_t encCnt[2] = {0,0};                 //!< Encoder module: used to store the read-in CNT value. @ref Enc_GetCNT
+    uint8_t  keyEvents[KEY_EV_COUNT];           //!< Keys module: @ref g_CurrKeyEV
+    uint8_t  hc05RxFlag;                        //!< HC05 module: @ref HC05_RxFlag
+    int16_t  yawData;                           //!< Yaw data.
+    char     hc05Msg[HC05_UART_PACKET_MAXLEN];  //!< HC05 module: @ref HC05_RxPacket
+    float controlledPWM[2];                     //!< PID module: used to store the control output from @ref PID_Update
 
     /* `Update()` Section */
 
@@ -83,6 +97,29 @@ void CmtSys_Update()
         HC05_SendStringFormatted("%f,%f,%f\r\n", g_actualRPM[0], g_targetRPM[0], controlledPWM[0]);
         __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
     }
+
+    if(MPU6050_IsReady() != 0U)
+    {// yep it can work
+        if(MPU6050_SampleTimeReached(nowMs) != 0U)
+        {// yep we should sample it
+            if(MPU6050_ReadYawData(&yawData) == 0U)
+            {// yes! we got it
+                MPU6050_YawRawToDps(&yawData);
+                HC05_SendStringFormatted("YAW:%d.\r\n", yawData);
+            }
+            else
+            {// no! seems to have failed
+                HC05_SendString("YAW:ERROR.\r\n");
+            }
+        }
+        else;//wait until i want it
+    }
+    else
+    {// Re-try initialization
+        MPU6050_Init();
+    }
+
+    HW_I2C_UpdateError(nowMs);
 
     /* Keys Module Action */
     
