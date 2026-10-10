@@ -10,15 +10,6 @@ void Motion_Init(void)
     Motor_Init();
 }
 
-/// @brief set the motion of the robot
-/// @param argv the speed percentage arguments for the motion; its meaning varies across different motions
-/// @param targetRPM the target RPM for the motion
-void Motion_SetTarget(float *argv, float *targetRPM)
-{
-	targetRPM[0] = argv[0];
-	targetRPM[1] = argv[1];
-}
-
 void Motion_SetStop(uint8_t stopState)
 {
     uint8_t dirInput[MOTOR_PIN_COUNT] = {0, 0, 0, 0};

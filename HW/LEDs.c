@@ -92,7 +92,7 @@ void LED_StopFlicker(LEDslot slot)
 
 /// @brief `Update()` fn of LEDs module; Check and update the flickering state of each LED.
 /// @param nowMs The current time in milliseconds.
-void LED_CheckFlicker(uint32_t nowMs)
+void LED_CheckFlicker_SysTick(uint32_t nowMs)
 {
 	uint8_t i;
 

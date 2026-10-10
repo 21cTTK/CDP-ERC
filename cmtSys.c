@@ -12,16 +12,6 @@
 #include "PID.h"
 #include <string.h>
 
-#define __TEMP__ENC_MSG_INTVL_MS    114
-
-volatile float currRamp;
-
-static uint32_t __TEMP__nextEncMsgMs;
-static float g_actualRPM[2];                // Encoder module:       used to store the speed collected from encoder in RPM
-                                            ///                      @ref `uint8_t Enc_SampleSpeed(uint16_t *speed, uint32_t nowMs)`
-static float g_targetRPM[2];                // Motion, PID module:   used to store the target RPM for the motion
-                                            ///                      @ref `void Motion_SetTarget(float *argv, float *g_targetRPM)`
-
 void CmtSys_Init()
 {
     /* Module Init */
@@ -59,12 +49,13 @@ void CmtSys_Init()
     CmtSysTim_Init();
 
     /* Cleanup for startup */
-    __TEMP__nextEncMsgMs = 0;
+    //...
 }
 
+/// @brief Main area for module interaction and system activities 
 void CmtSys_Update()
 {
-    /* Forward Decl Section */
+    /* Intermediate Variables' Forward Decl Section */
     
     uint32_t nowMs;                             //!< cmtSys_TIM module: provides system time
     uint16_t encCnt[2] = {0,0};                 //!< Encoder module: used to store the read-in CNT value. @ref Enc_GetCNT
@@ -72,30 +63,30 @@ void CmtSys_Update()
     uint8_t  hc05RxFlag;                        //!< HC05 module: @ref HC05_RxFlag
     int16_t  yawData;                           //!< Yaw data.
     char     hc05Msg[HC05_UART_PACKET_MAXLEN];  //!< HC05 module: @ref HC05_RxPacket
-    float controlledPWM[2];                     //!< PID module: used to store the control output from @ref PID_Update
+    float    actualRPM[2];                      //!< PID module: used to store the actual RPM value from @ref Enc_SampleSpeed
+    float    targetRPM[2];                      //!< PID module: used to store the target RPM value from @ref Motion_SetTarget
+    float    controlledPWM[2];                  //!< PID module: used to store the control output from @ref PID_Update
 
     /* `Update()` Section */
 
     nowMs = CmtSysTim_GetMs();
     Key_GetEvents(keyEvents);
     hc05RxFlag = HC05_GetRxFlag();
-    if(Enc_SampleSpeed(g_actualRPM, nowMs) != 0)
+    
+    PID_GetActualRPM(actualRPM);
+    if(Enc_SampleSpeed(actualRPM, nowMs) != 0)
     {
-        float *value = PID_Ramp(g_targetRPM);
-        currRamp = value[0];
-        float *controlOutput = PID_Update(g_actualRPM, value);
+        float *currStep      = PID_Ramp();
+        float *controlOutput = PID_Update(actualRPM, currStep, Motion_IsStopped());
         
         controlledPWM[0] = controlOutput[0];
         controlledPWM[1] = controlOutput[1];
         Motion_SetSpeed(controlledPWM);
     }
-
-    LED_CheckFlicker(nowMs);
     
-    if(__TEMP__nextEncMsgMs < nowMs)
+    if(HC05_PidMsgTimeReached(nowMs) != 0U)
     {
-        HC05_SendStringFormatted("%f,%f,%f\r\n", g_actualRPM[0], g_targetRPM[0], controlledPWM[0]);
-        __TEMP__nextEncMsgMs = nowMs + __TEMP__ENC_MSG_INTVL_MS;
+        HC05_SendStringFormatted("%f,%f,%f\r\n", actualRPM[0], targetRPM[0], controlledPWM[0]);
     }
 
     if(MPU6050_IsReady() != 0U)
@@ -150,7 +141,7 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
             float speed[] = {+314.0f, +314.0f};
-            Motion_SetTarget(speed, g_targetRPM);
+            PID_SetTargetRPM(speed);
             Motion_SetStop(0);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
@@ -160,7 +151,7 @@ void CmtSys_Update()
         {
             float newSpeed = HC05_ParseMsgFloat(hc05Msg + 8);
             float speed[] = {newSpeed, newSpeed};
-            Motion_SetTarget(speed, g_targetRPM);
+            PID_SetTargetRPM(speed);
             Motion_SetStop(0);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
@@ -169,7 +160,7 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+FORWARD_LEFT") == 0)
         {
             float speed[] = {+114.0f, +314.0f};
-            Motion_SetTarget(speed, g_targetRPM);
+            PID_SetTargetRPM(speed);
             Motion_SetStop(0);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
@@ -178,7 +169,7 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+FORWARD_RIGHT") == 0)
         {
             float speed[] = {+314.0f, +114.0f};
-            Motion_SetTarget(speed, g_targetRPM);
+            PID_SetTargetRPM(speed);
             Motion_SetStop(0);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
@@ -187,7 +178,7 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
             float speed[] = {-314.0f, -314.0f};
-            Motion_SetTarget(speed, g_targetRPM);
+            PID_SetTargetRPM(speed);
             Motion_SetStop(0);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
@@ -195,7 +186,7 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
-            Motion_SetTarget((float[]){0.0f, 0.0f}, g_targetRPM);
+            Motion_SetTarget((float[]){0.0f, 0.0f}, targetRPM);
             Motion_SetStop(1);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
@@ -204,7 +195,7 @@ void CmtSys_Update()
 		else if (strcmp(hc05Msg, "MOTION+PAUSE") == 0)
         {
             float speed[] = {0.0f, 0.0f};
-            Motion_SetTarget(speed, g_targetRPM);
+            PID_SetTargetRPM(speed);
             Motion_SetStop(0);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);

@@ -4,6 +4,9 @@
 #include <stdarg.h>
 #include <math.h>
 
+#define HC05_PID_MSG_INTVL_MS    114
+
+static uint32_t g_nextPidMsgMs;
 static char 	HC05_RxPacket[HC05_UART_PACKET_MAXLEN];
 static uint8_t  HC05_RxFlag = 0U;       // `1`: Full Packet received and ready to be read; `0`: No packet received
 
@@ -195,6 +198,8 @@ void HC05_Init(void)
 	NVIC_Init(&NVIC_InitStructure);	
 	
 	USART_Cmd(USART3, ENABLE);
+
+	g_nextPidMsgMs = 0U;
 }
 
 /// @brief Send a string over HC-05 Bluetooth module; API fn
@@ -333,6 +338,16 @@ float HC05_ParseMsgFloat(const char *float_str)
 	floatVal = (float)intPart + (float)fracPart / (float)scale;
 
 	return floatVal;
+}
+
+uint8_t HC05_PidMsgTimeReached(uint32_t nowMs)
+{
+	if(nowMs >= g_nextPidMsgMs)
+	{
+		g_nextPidMsgMs = nowMs + HC05_PID_MSG_INTVL_MS;
+		return 1U;
+	}
+	return 0U;
 }
 
 void HC05_ISR(void)

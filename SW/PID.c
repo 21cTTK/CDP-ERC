@@ -13,48 +13,49 @@
 
 static float g_Kp;
 static float g_Ki;
-
-volatile float g_currError;
-volatile float g_actualRPM;
-volatile float g_targetRPM;
-volatile float g_controlledPWM;
-volatile float g_Int;
+static float g_actualRPM[2];
+static float g_targetRPM[2];
 
 void PID_Init(void)
 {
     g_Kp = PID_INITIAL_KP;
     g_Ki = PID_INITIAL_KI;
+    g_actualRPM[0] = 0.0f;
+    g_targetRPM[0] = 0.0f;
+    g_actualRPM[1] = 0.0f;
+    g_targetRPM[1] = 0.0f;
 }
 
-float* PID_Ramp(float* targetRPM)
+float* PID_Ramp(void)
 {
     static float s_currTargetRPM[2] = {0, 0};
 
     for(int i = 0; i < 2; i++)
     {
-        if(s_currTargetRPM[i] < targetRPM[i])
+        if(s_currTargetRPM[i] < g_targetRPM[i])
         {//forward ramping
             s_currTargetRPM[i] += PID_RAMP_STEP_SIZE;
-            if(s_currTargetRPM[i] > targetRPM[i])
-                s_currTargetRPM[i] = targetRPM[i];
+            if(s_currTargetRPM[i] > g_targetRPM[i])
+                s_currTargetRPM[i] = g_targetRPM[i];
         }
-        else if(s_currTargetRPM[i] > targetRPM[i])
+        else if(s_currTargetRPM[i] > g_targetRPM[i])
         {//backward ramping
             s_currTargetRPM[i] -= PID_RAMP_STEP_SIZE;
-            if(s_currTargetRPM[i] < targetRPM[i])
-                s_currTargetRPM[i] = targetRPM[i];
+            if(s_currTargetRPM[i] < g_targetRPM[i])
+                s_currTargetRPM[i] = g_targetRPM[i];
         }
     }
 
     return s_currTargetRPM;
 }
 
-/// @brief 
+/// @brief start an iteration of PID control loop
 /// @param actualRPM
 /// @param targetRPM
+/// @param shouldStop if true, the integral term will be reset to zero
 /// @note - update interval matches that of @ref ENC_SPEED_SAMP_INTVL_MS 
 /// @return - control output float array
-float* PID_Update(float* actualRPM, float* targetRPM, float isStop)
+float* PID_Update(float* actualRPM, float* targetRPM, uint8_t shouldStop)
 {
     static float s_prevError[2] = {0, 0};
     static float s_errorIntRPM[2] = {0, 0};
@@ -66,7 +67,7 @@ float* PID_Update(float* actualRPM, float* targetRPM, float isStop)
     };
 
     //if isStop is true, reset the integrated error
-    if (Motion_IsStopped() == 1) {
+    if (shouldStop == 1) {
         s_errorIntRPM[0] = 0.0f;
         s_errorIntRPM[1] = 0.0f;
     }
@@ -105,12 +106,6 @@ float* PID_Update(float* actualRPM, float* targetRPM, float isStop)
             controlOutPWM[i] = PID_CLAMP_MIN;
         }
     }
-
-	g_Int = s_errorIntRPM[0];
-    g_currError = currErrorRPM[0];
-    g_actualRPM = actualRPM[0];
-    g_targetRPM = targetRPM[0];
-    g_controlledPWM = controlOutPWM[0];
     
     //return control output
     return controlOutPWM;
@@ -122,4 +117,16 @@ void PID_SetGains(float Kp, float Ki)
         g_Kp = Kp;
     if(Ki >= 0.0f)
         g_Ki = Ki;
+}
+
+void PID_GetActualRPM(float* actualRPM)
+{
+    actualRPM[0] = g_actualRPM[0];
+    actualRPM[1] = g_actualRPM[1];
+}
+
+void PID_SetTargetRPM(float* targetRPM)
+{
+    g_targetRPM[0] = targetRPM[0];
+    g_targetRPM[1] = targetRPM[1];
 }

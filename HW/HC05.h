@@ -11,9 +11,10 @@
 void HC05_Init(void);
 void HC05_SendString(char *String);
 void HC05_SendStringFormatted(const char *str_f, ...);
+void HC05_GetRxPacket(char *buffer);
+float   HC05_ParseMsgFloat(const char *float_str);
 uint8_t HC05_GetRxFlag(void);
-void    HC05_GetRxPacket(char *buffer);
-float HC05_ParseMsgFloat(const char *float_str);
+uint8_t HC05_PidMsgTimeReached(uint32_t nowMs);
 void HC05_ISR(void);
 
 #endif//HC05_H

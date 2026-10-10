@@ -16,7 +16,7 @@ typedef enum __LEDS_DEF_ENUM
 void LED_Init(void);
 void LED_TurnON(LEDslot slot);
 void LED_TurnOFF(LEDslot slot);
-void LED_CheckFlicker(uint32_t nowMs);
+void LED_CheckFlicker_SysTick(uint32_t nowMs);
 void LED_SetFlicker(uint32_t nowMs, LEDslot slot, uint8_t times, uint16_t intervalMs);
 void LED_StopFlicker(LEDslot slot);
 uint8_t LED_IsON(LEDslot slot);

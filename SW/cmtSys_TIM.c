@@ -1,5 +1,6 @@
 #include "stm32f10x.h"
 #include "Keys.h"
+#include "LEDs.h"
 
 static uint32_t g_SysMs;
 
@@ -34,7 +35,10 @@ void CmtSysTim_Init(void)
 void CmtSysTim_ISR(void)
 {
 	g_SysMs++;
-	Key_CheckState_SysTick();
+
+	/* Prioritized Activities */
+	Key_CheckState_SysTick();			// uses inner counter
+	LED_CheckFlicker_SysTick(g_SysMs);	// depends on `g_SysMs`
 }
 
 uint32_t CmtSysTim_GetMs(void)
