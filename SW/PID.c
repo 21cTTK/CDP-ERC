@@ -60,6 +60,9 @@ float* PID_Update(float* actualRPM, float* targetRPM, uint8_t shouldStop)
     static float s_prevError[2] = {0, 0};
     static float s_errorIntRPM[2] = {0, 0};
 
+    g_actualRPM[0] = actualRPM[0];
+    g_actualRPM[1] = actualRPM[1];
+
     //compute curr error
     float currErrorRPM[2] = {
         targetRPM[0] - actualRPM[0],
@@ -123,6 +126,12 @@ void PID_GetActualRPM(float* actualRPM)
 {
     actualRPM[0] = g_actualRPM[0];
     actualRPM[1] = g_actualRPM[1];
+}
+
+void PID_GetTargetRPM(float* targetRPM)
+{
+    targetRPM[0] = g_targetRPM[0];
+    targetRPM[1] = g_targetRPM[1];
 }
 
 void PID_SetTargetRPM(float* targetRPM)

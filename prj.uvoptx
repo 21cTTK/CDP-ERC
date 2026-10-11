@@ -152,50 +152,18 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>39</LineNumber>
+          <LineNumber>124</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134225418</Address>
+          <Address>134228668</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\HW\MPU6050.c</Filename>
+          <Filename>.\SW\PID.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\prj\HW/MPU6050.c\39</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>731</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134223304</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\HW\HW_I2C.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\prj\HW/HW_I2C.c\731</Expression>
-        </Bp>
-        <Bp>
-          <Number>2</Number>
-          <Type>0</Type>
-          <LineNumber>520</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134222566</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\HW\HW_I2C.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\prj\HW/HW_I2C.c\520</Expression>
+          <Expression>\\prj\SW/PID.c\124</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -230,47 +198,47 @@
           <ItemText>g_CNT,0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>5</count>
+          <count>6</count>
           <WinNumber>1</WinNumber>
           <ItemText>speedRPM[1]</ItemText>
         </Ww>
         <Ww>
-          <count>6</count>
+          <count>7</count>
           <WinNumber>1</WinNumber>
           <ItemText>speedRPM[0]</ItemText>
         </Ww>
         <Ww>
-          <count>7</count>
+          <count>8</count>
           <WinNumber>1</WinNumber>
           <ItemText>nowCNT[0],0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>8</count>
+          <count>9</count>
           <WinNumber>1</WinNumber>
           <ItemText>nowCNT[1],0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>9</count>
+          <count>10</count>
           <WinNumber>1</WinNumber>
           <ItemText>rawSpeedRPM[0]</ItemText>
         </Ww>
         <Ww>
-          <count>10</count>
+          <count>11</count>
           <WinNumber>1</WinNumber>
           <ItemText>rawSpeedRPM[1]</ItemText>
         </Ww>
         <Ww>
-          <count>11</count>
+          <count>12</count>
           <WinNumber>1</WinNumber>
           <ItemText>g_errReg</ItemText>
         </Ww>
         <Ww>
-          <count>12</count>
+          <count>13</count>
           <WinNumber>1</WinNumber>
           <ItemText>g_MPU6050_ready</ItemText>
         </Ww>
         <Ww>
-          <count>13</count>
+          <count>14</count>
           <WinNumber>1</WinNumber>
           <ItemText>g_HW_I2C_hasInit</ItemText>
         </Ww>
@@ -281,7 +249,7 @@
       <DebugFlag>
         <trace>0</trace>
         <periodic>1</periodic>
-        <aLwin>0</aLwin>
+        <aLwin>1</aLwin>
         <aCover>0</aCover>
         <aSer1>0</aSer1>
         <aSer2>0</aSer2>
@@ -1295,7 +1263,7 @@
     </File>
     <File>
       <GroupNumber>4</GroupNumber>
-      <FileNumber>75</FileNumber>
+      <FileNumber>79</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1307,7 +1275,7 @@
     </File>
     <File>
       <GroupNumber>4</GroupNumber>
-      <FileNumber>76</FileNumber>
+      <FileNumber>80</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>

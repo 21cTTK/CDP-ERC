@@ -8,6 +8,7 @@ float* PID_Ramp(void);
 float* PID_Update(float* actualRPM, float* targetRPM, uint8_t shouldStop);
 void PID_SetGains(float Kp, float Ki);
 void PID_GetActualRPM(float* actualRPM);
+void PID_GetTargetRPM(float* targetRPM);
 void PID_SetTargetRPM(float* targetRPM);
 
 #endif//__PID_H

@@ -14,6 +14,6 @@ typedef enum __MOTION_ENUM
 void Motion_Init(void);
 void Motion_SetSpeed(float *argv);
 void Motion_Stop(void);
-uint8_t Motion_IsStopped(void);
+void Motion_SetStop(uint8_t stopState);
 
 #endif//__MOTION_H

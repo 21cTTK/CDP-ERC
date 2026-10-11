@@ -74,6 +74,7 @@ void CmtSys_Update()
     hc05RxFlag = HC05_GetRxFlag();
     
     PID_GetActualRPM(actualRPM);
+    PID_GetTargetRPM(targetRPM);
     if(Enc_SampleSpeed(actualRPM, nowMs) != 0)
     {
         float *currStep      = PID_Ramp();
@@ -186,7 +187,7 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
-            Motion_SetTarget((float[]){0.0f, 0.0f}, targetRPM);
+            PID_SetTargetRPM((float[]){0.0f, 0.0f});
             Motion_SetStop(1);
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
