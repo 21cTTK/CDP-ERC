@@ -1,5 +1,6 @@
 #include "stm32f10x.h"                  // Device header
 #include "PWM-Motor.h"
+#include "Enc.h"
 
 /* Helper Functions */
 
@@ -28,8 +29,8 @@ void Motor_Init(void)
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
 	TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
-	TIM_TimeBaseInitStructure.TIM_Period = 1000U - 1U;				//ARR
-	TIM_TimeBaseInitStructure.TIM_Prescaler = 72U - 1U;				//PSC
+	TIM_TimeBaseInitStructure.TIM_Period = ENC_IC_PWM_ARR - 1U;				//ARR
+	TIM_TimeBaseInitStructure.TIM_Prescaler = ENC_IC_PSC_DIV - 1U;			//PSC
 	TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0U;
 	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStructure);
 	
@@ -65,13 +66,39 @@ void Motor_Init(void)
 /// @brief helper fn to set speed of the motor by entering percentage
 /// @param perc float val like 11.45, ...
 void Motor_L_SetSpeed(float perc)
-{// actual_percentage(duty) = (CCR / 1000) * 100%
-	TIM_SetCompare3(TIM3, (uint16_t)(perc * 10.0f));
+{// actual_percentage(duty) = (CCR / ARR(+1)) * 100%
+	uint16_t clampedCCR;
+	float ccr = (perc * (float)(ENC_IC_PWM_ARR) / 100.0f);
+	
+	// uint16_t clamp
+	if(ccr > (uint32_t)((1<<16) - 1))
+	{
+		clampedCCR = (uint16_t)((1<<16) - 1);
+	}
+	else
+	{
+		clampedCCR = (uint16_t)ccr;
+	}
+
+	TIM_SetCompare3(TIM3, (uint16_t)clampedCCR);
 }
 
 void Motor_R_SetSpeed(float perc)
 {
-	TIM_SetCompare4(TIM3, (uint16_t)(perc * 10.0f));
+	uint16_t clampedCCR;
+	float ccr = (perc * (float)(ENC_IC_PWM_ARR) / 100.0f);
+
+	// uint16_t clamp
+	if(ccr > (uint32_t)((1<<16) - 1))
+	{
+		clampedCCR = (uint16_t)((1<<16) - 1);
+	}
+	else
+	{
+		clampedCCR = (uint16_t)ccr;
+	}
+
+	TIM_SetCompare4(TIM3, (uint16_t)clampedCCR);
 }
 
 /// @brief set TB6612FNG AIN/BIN pins to control the direction of the motor

@@ -58,7 +58,6 @@ void CmtSys_Update()
     /* Intermediate Variables' Forward Decl Section */
     
     uint32_t nowMs;                             //!< cmtSys_TIM module: provides system time
-    uint16_t encCnt[2] = {0,0};                 //!< Encoder module: used to store the read-in CNT value. @ref Enc_GetCNT
     uint8_t  keyEvents[KEY_EV_COUNT];           //!< Keys module: @ref g_CurrKeyEV
     uint8_t  hc05RxFlag;                        //!< HC05 module: @ref HC05_RxFlag
     int16_t  yawData;                           //!< Yaw data.

@@ -153,91 +153,17 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>g_currError</ItemText>
+          <ItemText>g_RPM</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>g_actualRPM</ItemText>
+          <ItemText>t_duty</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>g_targetRPM</ItemText>
-        </Ww>
-        <Ww>
-          <count>3</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_controlledPWM</ItemText>
-        </Ww>
-        <Ww>
-          <count>4</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_Int</ItemText>
-        </Ww>
-        <Ww>
-          <count>5</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_CNT,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>6</count>
-          <count>6</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>speedRPM[1]</ItemText>
-        </Ww>
-        <Ww>
-          <count>7</count>
-          <count>7</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>speedRPM[0]</ItemText>
-        </Ww>
-        <Ww>
-          <count>8</count>
-          <count>8</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>nowCNT[0],0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>9</count>
-          <count>9</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>nowCNT[1],0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>10</count>
-          <count>10</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>rawSpeedRPM[0]</ItemText>
-        </Ww>
-        <Ww>
-          <count>11</count>
-          <count>11</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>rawSpeedRPM[1]</ItemText>
-        </Ww>
-        <Ww>
-          <count>12</count>
-          <count>12</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_errReg</ItemText>
-        </Ww>
-        <Ww>
-          <count>13</count>
-          <count>13</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_MPU6050_ready</ItemText>
-        </Ww>
-        <Ww>
-          <count>14</count>
-          <count>14</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_HW_I2C_hasInit</ItemText>
-        </Ww>
-        <Ww>
-          <count>15</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>g_watch_RPM,0x0A</ItemText>
+          <ItemText>clampedCCR,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -246,7 +172,6 @@
       <DebugFlag>
         <trace>0</trace>
         <periodic>1</periodic>
-        <aLwin>1</aLwin>
         <aLwin>1</aLwin>
         <aCover>0</aCover>
         <aSer1>0</aSer1>
@@ -283,6 +208,12 @@
       <pszMrulep></pszMrulep>
       <pSingCmdsp></pSingCmdsp>
       <pMultCmdsp></pMultCmdsp>
+      <SystemViewers>
+        <Entry>
+          <Name>System Viewer\TIM1</Name>
+          <WinId>35905</WinId>
+        </Entry>
+      </SystemViewers>
       <DebugDescription>
         <Enable>0</Enable>
         <EnableFlashSeq>0</EnableFlashSeq>
@@ -1262,7 +1193,6 @@
     <File>
       <GroupNumber>4</GroupNumber>
       <FileNumber>79</FileNumber>
-      <FileNumber>79</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1274,7 +1204,6 @@
     </File>
     <File>
       <GroupNumber>4</GroupNumber>
-      <FileNumber>80</FileNumber>
       <FileNumber>80</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>

@@ -57,7 +57,7 @@ float* PID_Ramp(void)
 /// @return - control output float array
 float* PID_Update(float* actualRPM, float* targetRPM, uint8_t shouldStop)
 {
-    static float s_prevError[2] = {0, 0};
+//    static float s_prevError[2] = {0, 0};
     static float s_errorIntRPM[2] = {0, 0};
 
     g_actualRPM[0] = actualRPM[0];
