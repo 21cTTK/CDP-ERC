@@ -7,18 +7,21 @@
 #define ENC_MULT					4	  // depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
 #define ENC_GEAR_RATIO  			9.6
 
-volatile float g_watch_RPM;
+/// @brief also serves as a state machine for speed sampling
+typedef enum __ENC_SAMPLE_METHODS_DEF_ENUM {
+	ENC_SAMP_METHOD_BY_ENC = 0,
+	ENC_SAMP_METHOD_BY_IC
+} EncSampMethodsDef_t;
 
 /* Speed Measurement Related Macro*/
 //tunables
-//#define ENC_TIM_ARR							1000U
-//#define ENC_MIN_SAFE_IC_PULSE_WIDTH_CNT		50U		// Minimum safe TIM IC pulse width that doesn't drop pulses (deemed SAFE)
-// #define ENC_SAMPLE_SWITCH_THRESHOLD_CPS		100U	//!< Unit is Count Per Sample
-// //constants
-// #define ENC_IC_PULSE_WIDTH_THRESHOLD_CNT	100U
-
-static float    g_avgRPM[2] = {0, 0}; // average RPM over this turn
-static uint16_t g_sampCnt[2] = {0, 0}; // sample count
+#define ENC_LOW_SPEED_HANDOVER_THRESHOLD_RPM	20U		//!< RPM threshold for handing over control at low speeds.
+#define ENC_HIGH_SPEED_HANDOVER_THRESHOLD_CPS	114514U	//!< CPS threshold for handing over control at high speeds
+#define ENC_LOW_SPEED_HYST_BAND_RPM				10U		//!< Hysteresis for low-speed handover. @warning SHOULD be less than @ref ENC_LOW_SPEED_HANDOVER_THRESHOLD_RPM
+#define ENC_HIGH_SPEED_HYST_BAND_CPS			1000U	//!< Hysteresis for high-speed handover
+// #define ENC_LOW_SPEED_HYST_DEBOUNCE_TIMES	1U		//!< Delay for low-speed handover
+// #define ENC_HIGH_SPEED_HYST_DEBOUNCE_TIMES	1U		//!< Delay for high-speed handover
+#define ENC_IC_LAG_FILTER_COEF					0.78f
 
 /// @brief Read in curr CNT and reset it to `ENC_CNT_ZERO_BASE`.
 /// @note - real CNT ticks are calculated based on delta with `ENC_CNT_ZERO_BASE` to prevent ovf/udf
@@ -117,42 +120,148 @@ void Enc_Init(void)
 
 /* Speed Sampling */
 
-static void Enc_SampleSpeedByIC(uint8_t channel)
+static void Enc_SampleSpeedSign(uint8_t *speedSign)
 {
-	static uint8_t  s_hasRisen[2] = {0, 0}; // whether the channel already holds a valid previous capture
-	static uint16_t s_lastCNT[2]  = {0, 0}; // last captured CNT
-	static uint16_t s_lastMs[2]   = {0, 0}; // last captured time (low 16 bit of the ms tick suffices for `ENC_SPEED_SAMP_INTVL_MS`)
+	uint8_t sign = 0;
+	uint8_t currCNT[2] = {0, 0};
+
+	currCNT[0] = TIM_GetCounter(TIM1);
+	currCNT[1] = TIM_GetCounter(TIM2);
+
+	uint8_t i;
+	for(i = 0; i < 2; i++)
+	{
+		if(currCNT[i] >= ENC_CNT_ZERO_BASE)
+		{
+			speedSign[i] = 0;
+		}
+		else
+		{
+			speedSign[i] = 1;
+		}
+	}
+}
+
+/// @brief calculate a rough RPM from encoder counts
+/// @param speedRPM float array to store the RPM values
+/// @param nowMs current system time in Ms
+/// @note - Assumption: CNT do not ovf or udf (ARR/2@32768); mind your `ENC_SPEED_SAMP_INTVL_MS`
+/// @return - `1` if speed was updated
+/// @return - `0` otherwise
+static void Enc_SampleSpeedByEnc(float *speedRPM, float *speedCPS, uint32_t nowMs)
+{
+	static uint32_t s_nextSampMs  = 0;
+	static uint8_t  s_firstSample = 1;
+
+	uint16_t nowCNT[2]    = {0, 0};
+	uint16_t deltaCNT[2]  = {0, 0};
+	uint8_t  speedSign[2] = {0, 0};
+	uint32_t elapsedMs;
+
+	//get direction (speed sign)
+	Enc_SampleSpeedSign(speedSign);
+
+	if(s_firstSample)
+	{// discard first sample (but still do the routine)
+		Enc_GetCNT(nowCNT);	// also reset CNT
+		s_firstSample = 0;
+	}
+	else
+	{// normal routine
+		Enc_GetCNT(nowCNT);	// also reset CNT
+		elapsedMs = nowMs - s_nextSampMs;
+
+		uint8_t i;
+		for(i = 0; i < 2; i++)
+		{
+			if(speedSign[i] == 0)
+			{//'+'
+				deltaCNT[i] = nowCNT[i] - ENC_CNT_ZERO_BASE;
+			}
+			else
+			{//'-'
+				deltaCNT[i] = ENC_CNT_ZERO_BASE - nowCNT[i];
+			}
+		}
+
+		speedRPM[0] = (speedSign[0] ? -1 : 1) *
+					  (deltaCNT[0] /
+					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * elapsedMs)
+					  ) * 1000 * 60; // L speed
+
+		speedRPM[1] = (speedSign[1] ? -1 : 1) *
+					  (deltaCNT[1] /
+					   ((ENC_LINES * ENC_GEAR_RATIO * ENC_MULT) * elapsedMs)
+					  ) * 1000 * 60; // R speed
+
+		speedCPS[0] = deltaCNT[0];
+		speedCPS[1] = deltaCNT[1];
+
+		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
+	}
+}
+
+/**
+ * @param mode The sampling mode to specify use of this fn. 
+ * 	This parameter can be one of these three values:
+ * 	- @arg 0: Called by @ref Enc_ISR - sample one pulse. param `speedRPM` is not used
+ * 	- @arg 1: Called by @ref Enc_SampleSpeed - update `speedRPM`. param `thisCNT` is not used
+ */
+static void Enc_SampleSpeedByIC(float *speedRPM, uint16_t thisCNT, uint8_t channel, uint8_t mode)
+{
+	static uint8_t  s_hasRisen[2] 	 = {0, 0}; // whether the channel already holds a valid previous capture
+	static uint16_t s_lastCNT[2]  	 = {0, 0}; // last captured CNT
+	static uint32_t s_lastMs[2]   	 = {0, 0}; // last captured time (low 16 bit of the ms tick suffices for `ENC_SPEED_SAMP_INTVL_MS`)
+	static uint16_t s_filteredRPM[2] = {0, 0};
+	static uint8_t  s_firstSample[2] = {1, 1};
 
 	/* Body */
-	uint16_t thisCNT;
-	uint16_t thisMs;
+
+	uint32_t thisMs;
 	uint32_t deltaTimeUs;
+	uint8_t  speedSign[2];
 	float    thisRPM;
 
-	//CCR1 carries the TIM3_CH1(L) capture, CCR2 carries the TIM3_CH2(R) one
-	thisCNT = (channel == 0U) ? TIM_GetCapture1(TIM3) : TIM_GetCapture2(TIM3);
-	thisMs  = (uint16_t)CmtSysTim_GetMs();
+	if(mode == 0)
+	{
+		Enc_SampleSpeedSign(speedSign);
 
-	// the ms diff MUST be taken in 16 bit modular arith first: promoting it to `int`
-	// would turn a wrap of `thisMs` (< `s_lastMs`) into a negative interval
-	deltaTimeUs = (uint32_t)(uint16_t)(thisMs - s_lastMs[channel]) * 1000U +
-				  (uint16_t)(thisCNT - s_lastCNT[channel]);
+		thisMs = CmtSysTim_GetMs();
 
-	if((s_hasRisen[channel] == 0U) || (deltaTimeUs == 0U))
-	{// no valid interval yet: only (re)arm the reference and drop this biased sample
-		s_hasRisen[channel] = 1U;
-		s_lastCNT[channel]  = thisCNT;
-		s_lastMs[channel]   = thisMs;
-		return;
+		deltaTimeUs = (thisMs - s_lastMs[channel]) * 1000U +
+					(thisCNT - s_lastCNT[channel]);
+
+		s_lastCNT[channel] = thisCNT;
+		s_lastMs[channel]  = thisMs;
+
+		if((s_hasRisen[channel] == 0U) || (deltaTimeUs == 0U))
+		{// no valid interval yet: only (re)arm the reference and drop this biased sample
+			s_hasRisen[channel] = 1U;
+			s_lastCNT[channel]  = thisCNT;
+			s_lastMs[channel]   = thisMs;
+			return;
+		}
+
+		thisRPM = (60 *1000000) /
+				((ENC_LINES * ENC_GEAR_RATIO) * deltaTimeUs);
+
+		//decides sign
+		thisRPM *= (speedSign[channel] ? -1 : 1);
+
+		if(s_firstSample[channel] == 1)
+		{// init
+			s_filteredRPM[channel] = thisRPM;
+			return;
+		}
+
+		//lag filter
+		s_filteredRPM[channel] += ENC_IC_LAG_FILTER_COEF * (thisRPM - s_filteredRPM[channel]);
 	}
-
-	thisRPM = (60 *1000000) /
-			  ((ENC_LINES * ENC_GEAR_RATIO * (ENC_MULT / 2) ) * deltaTimeUs);
-
-	g_avgRPM[channel] = (g_avgRPM[channel] * g_sampCnt[channel] + thisRPM) / (++g_sampCnt[channel]);
-
-	s_lastCNT[channel] = thisCNT;
-	s_lastMs[channel]  = thisMs;
+	else if(mode == 1)
+	{
+		speedRPM[0] = s_filteredRPM[0];
+		speedRPM[1] = s_filteredRPM[1];
+	}
 }
 
 /// @brief Get actual motor speed in RPM
@@ -166,51 +275,75 @@ static void Enc_SampleSpeedByIC(uint8_t channel)
 /// @return - `0` otherwise
 uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
 {
-	static uint32_t s_nextSampMs  = 0;
-	static uint8_t  s_firstSample = 1;
+	static uint32_t s_nextSampMs = 0;
+	static float s_lastRPM[2] = {0, 0};
+	static float s_lastCPS[2] = {0, 0};
+	static uint8_t  s_lastMethod = ENC_SAMP_METHOD_BY_ENC;
+	//static uint8_t  s_hystMs     = 0;
 
-	if(s_firstSample)
-	{// discard first sample (but still do the routine)
-		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
-		s_firstSample = 0;
-		return 0;
-	}
-	else if(nowMs >= s_nextSampMs)
-	{
-		// snapshot + clear MUST NOT interleave with Enc_ISR's read-modify-write of
-		// `g_avgRPM`/`g_sampCnt`, or a stale sample leaks into the next window
-		TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2, DISABLE);
+	if(nowMs >= s_nextSampMs)
+	{// Time to sample
+		switch (s_lastMethod)
+		{
+		case ENC_SAMP_METHOD_BY_ENC:
+			float sigLowRPM  = ENC_LOW_SPEED_HANDOVER_THRESHOLD_RPM + ENC_LOW_SPEED_HYST_BAND_RPM;
+			float sigHighCPS = ENC_HIGH_SPEED_HANDOVER_THRESHOLD_CPS - ENC_HIGH_SPEED_HYST_BAND_CPS;
+			// Check if we need to switch to the IC method
+			if(((s_lastRPM[0] > sigLowRPM) && (s_lastRPM[0] < sigHighCPS)) ||
+			   ((s_lastRPM[1] > sigLowRPM) && (s_lastRPM[1] < sigHighCPS)))
+			{// conditions met; switch to IC method
+				Enc_SampleSpeedByIC(speedRPM, (uint16_t)0, nowMs, 1);
+				s_lastMethod = ENC_SAMP_METHOD_BY_IC;
+			}
+			else
+			{// unchanged
+				Enc_SampleSpeedByEnc(speedRPM, s_lastCPS, nowMs);
+			}
+			break;
 
-		speedRPM[0] = g_avgRPM[0];
-		speedRPM[1] = g_avgRPM[1];
-
-		g_watch_RPM = speedRPM[0];
-
-		g_avgRPM[0] = 0;
-		g_avgRPM[1] = 0;
-		g_sampCnt[0] = 0;
-		g_sampCnt[1] = 0;
-
-		TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2, ENABLE);
+		case ENC_SAMP_METHOD_BY_IC:
+			float sigLowRPM  = ENC_LOW_SPEED_HANDOVER_THRESHOLD_RPM - ENC_LOW_SPEED_HYST_BAND_RPM;
+			float sigHighCPS = ENC_HIGH_SPEED_HANDOVER_THRESHOLD_CPS + ENC_HIGH_SPEED_HYST_BAND_CPS;
+			// Check if we need to switch to the Encoder method
+			if(((s_lastCPS[0] < sigLowRPM) && (s_lastCPS[0] > sigHighCPS)) &&
+			   ((s_lastCPS[1] < sigLowRPM) && (s_lastCPS[1] > sigHighCPS)))
+			{// conditions met; switch to Encoder method
+				Enc_SampleSpeedByEnc(speedRPM, s_lastCPS, nowMs);
+				s_lastMethod = ENC_SAMP_METHOD_BY_ENC;
+			}
+			else
+			{// unchanged
+				Enc_SampleSpeedByIC(speedRPM, (uint16_t)0, nowMs, 1);
+			}
+			break;
+		default:
+			break;
+		}
 
 		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
 		return 1;
 	}
-	else
+	else// not yet...
 		return 0;
 }
 
 void Enc_ISR(void)
 {
+	uint16_t captured[2] = {0, 0};
+	uint8_t  needUpdate[2] = {0, 0};
+
     if (TIM_GetITStatus(TIM3, TIM_IT_CC1) != RESET)
-    {
-      TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
-      Enc_SampleSpeedByIC(0);
+    {// L side sent the pulse
+		captured[0] = TIM_GetCapture1(TIM3);	// NOTE that reading CCR clears the IT flag so we don't need to clear it manually
+		needUpdate[0] = 1;
     }
 
 	if (TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET)
-	{
-	  TIM_ClearITPendingBit(TIM3, TIM_IT_CC2);
-	  Enc_SampleSpeedByIC(1);
+	{// R side sent the pulse
+		captured[1] = TIM_GetCapture2(TIM3);	// NOTE that reading CCR clears the IT flag so we don't need to clear it manually
+		needUpdate[1] = 1;
 	}
+
+	Enc_SampleSpeedByIC((float[]){0.0f, 0.0f}, captured, 0, 0);
+	Enc_SampleSpeedByIC((float[]){0.0f, 0.0f}, captured, 1, 0);
 }
