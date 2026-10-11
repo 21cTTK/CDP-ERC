@@ -8,8 +8,8 @@
 #define PID_INT_CLAMP_MAX 110.f  / g_Ki
 #define PID_RAMP_STEP_SIZE 32.0f
 
-#define PID_INITIAL_KP  0.5f
-#define PID_INITIAL_KI  0.12f
+#define PID_INITIAL_KP  0.55f
+#define PID_INITIAL_KI  0.09f
 
 static float g_Kp;
 static float g_Ki;

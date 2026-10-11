@@ -8,8 +8,8 @@ typedef struct __LEDS_DEF_STRUCT
 static const LEDdef g_LEDsDef[LED_COUNT] =
 {
 	[LED_MAIN]      = {GPIOC, GPIO_Pin_13},
-	[LED_MSG_RX]    = {GPIOA, GPIO_Pin_6},
-	[LED_CMD_EXEC]  = {GPIOA, GPIO_Pin_7},
+	[LED_MSG_RX]    = {GPIOA, GPIO_Pin_5},	// occupied by IC, pending mv to another pin
+	[LED_CMD_EXEC]  = {GPIOA, GPIO_Pin_5},	// occupied by IC, pending mv to another pin
 	[LED_I2C_ERROR] = {GPIOA, GPIO_Pin_5}
 };
 

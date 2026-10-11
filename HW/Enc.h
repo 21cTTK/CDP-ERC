@@ -6,4 +6,6 @@
 void Enc_Init(void);
 uint8_t Enc_SampleSpeed(float *speed, uint32_t nowMs);
 
+void Enc_ISR(void);
+
 #endif//__ENC_H
