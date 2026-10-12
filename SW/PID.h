@@ -10,5 +10,6 @@ void PID_SetGains(float Kp, float Ki);
 void PID_GetActualRPM(float* actualRPM);
 void PID_GetTargetRPM(float* targetRPM);
 void PID_SetTargetRPM(float* targetRPM);
+void PID_GetControlledPWM(float* controlledPWM);
 
 #endif//__PID_H

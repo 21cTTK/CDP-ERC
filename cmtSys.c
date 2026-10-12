@@ -75,16 +75,7 @@ void CmtSys_Update()
     
     PID_GetActualRPM(actualRPM);
     PID_GetTargetRPM(targetRPM);
-    if(Enc_SampleSpeed(actualRPM, nowMs) != 0)
-    {
-        float *currStep      = PID_Ramp();
-        float *controlOutput = PID_Update(actualRPM, currStep, Motion_IsStopped());
-        
-        controlledPWM[0] = controlOutput[0];
-        controlledPWM[1] = controlOutput[1];
-        Motion_SetSpeed(controlledPWM);
-    }
-    
+    PID_GetControlledPWM(controlledPWM);
     if(HC05_PidMsgTimeReached(nowMs) != 0U)
     {
         HC05_SendStringFormatted("%f,%f,%f\r\n", actualRPM[0], targetRPM[0], controlledPWM[0]);

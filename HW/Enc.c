@@ -331,7 +331,7 @@ static void Enc_SampleSpeedByIC(float *speedRPM, uint8_t channel, uint8_t wen)
  * @return - `1` if speed was updated
  * @return - `0` otherwise
  */
-uint8_t Enc_SampleSpeed(float *speedRPM, uint32_t nowMs)
+uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs)
 {
 	static uint8_t  s_firstSamp   = 1U;
 	static uint32_t s_nextSampMs  = 0;

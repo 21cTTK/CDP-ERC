@@ -13,7 +13,7 @@
 #define ENC_IC_WRAP_US	(ENC_IC_PWM_ARR * ENC_IC_TICK_US)	//!< us per CNT wrap
 
 void Enc_Init(void);
-uint8_t Enc_SampleSpeed(float *speed, uint32_t nowMs);
+uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs);
 void Enc_ISR(void);
 
 #endif//__ENC_H
