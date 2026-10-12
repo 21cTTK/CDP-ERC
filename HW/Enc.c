@@ -1,17 +1,20 @@
 #include "stm32f10x.h"
 #include "cmtSys_TIM.h"
 #include "Enc.h"
+#include <math.h>
 
 volatile float 	  tg_icRPM;
+volatile uint16_t tg_encCPS;
 volatile float 	  tg_encRPM;
+volatile uint8_t  tg_method;
 
 //Enc algo Tunables
-#define ENC_CNT_ZERO_BASE   		32768 	//!< base number that serves as a '0' used in @ref Enc_SampleSpeedByEnc ; value 1<<15
+#define ENC_CNT_ZERO_BASE   		32768U 	//!< base number that serves as a '0' used in @ref Enc_SampleSpeedByEnc ; value 1<<15
 #define ENC_IC_LAG_FILTER_COEF		0.78f	//!< lag filter coefficient used in @ref Enc_SampleSpeedByIC
+#define ENC_SPEED_SAMP_INTVL_MS  	10U
 
 /* Encoder properties Macro */
 //tunables
-#define ENC_SPEED_SAMP_INTVL_MS  	10
 #define ENC_LINES 					11
 #define ENC_MULT					4	  // depends on the config of TIM Encoder Interface; typically `TIM_EncoderMode_TI12` ==> `4`
 #define ENC_GEAR_RATIO  			9.6
@@ -20,8 +23,20 @@ volatile float 	  tg_encRPM;
 #define ENC_PULSES_PER_REV			(ENC_LINES * ENC_GEAR_RATIO)			//!< encoder pulses (PWM ticks) per output-shaft rev
 
 /* Speed Calculation Macro */
-#define ENC_IC_EDGE_TIMEOUT_US   	114514U
-#define ENC_IC_MIN_PULSE_INTVL_US	25U
+//IC method tunables
+#define ENC_IC_EDGE_TIMEOUT_US   			114514U
+#define ENC_IC_MIN_PULSE_INTVL_US			25U
+//Router tunables
+#define ENC_LOW_SPEED_SWITCH_THRESHOLD_RPM 	15.0f
+#define ENC_HIGH_SPEED_SWITCH_THRESHOLD_CPS 114U
+#define ENC_LOW_SPEED_HYST_BAND_RPM			5.0f
+#define ENC_HIGH_SPEED_HYST_BAND_CPS		14U
+
+/// @brief also serves as a state machine for speed sampling
+typedef enum __ENC_SAMPLE_METHODS_DEF_ENUM {
+	ENC_SAMP_METHOD_BY_ENC = 0,
+	ENC_SAMP_METHOD_BY_IC
+} EncSampMethodsDef_t;
 
 static volatile uint32_t g_WrapCount;	//!< Count how many counter wraps are there
 
@@ -198,8 +213,8 @@ static void Enc_SampleSpeedByEnc(float *speedRPM, uint16_t *speedCPS, uint32_t n
 					 ((float)ENC_COUNTS_PER_REV * (float)elapsedMs)
 					) * 1000.0f * 60.0f; // R speed
 
-		speedCPS[0] = (speedSign[0] ? -1 : 1) * deltaCNT[0];
-		speedCPS[1] = (speedSign[1] ? -1 : 1) * deltaCNT[1];
+		speedCPS[0] = deltaCNT[0];
+		speedCPS[1] = deltaCNT[1];
 	}
 	else;
 }
@@ -333,15 +348,18 @@ static void Enc_SampleSpeedByIC(float *speedRPM, uint8_t channel, uint8_t wen)
  */
 uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs)
 {
-	static uint8_t  s_firstSamp   = 1U;
-	static uint32_t s_nextSampMs  = 0;
-	// static uint8_t  s_lastMethod  = ENC_SAMP_METHOD_BY_ENC;
+	static uint8_t  s_firstSamp     = 1U;
+	static uint32_t s_nextSampMs    = 0;
+	static uint8_t  s_lastMethod[2] = {ENC_SAMP_METHOD_BY_ENC, ENC_SAMP_METHOD_BY_ENC};
+
+	uint8_t i;
 
 	if(s_firstSamp == 1U)
 	{
 		s_firstSamp = 0U;
-		float *dummy;
-		Enc_SampleSpeedByEnc(dummy, dummy, nowMs, 0U);
+		Enc_SampleSpeedByEnc((void *)0, (void *)0, nowMs, 0U);
+		//IC's sampling caller is @ref Enc_ISR not here, so first sample issue is not handled here. 
+		//Instead, it has its own solution by `s_icArmed[2]`
 		return 1U;
 	}
 
@@ -356,14 +374,50 @@ uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs)
 
 		tg_encRPM = encRPM[0];
 		tg_icRPM  = icRPM[0];
+		tg_encCPS = encCPS[0];
 
 		/* Routing method */
-		if(1)
-		{
-			speedRPM[0] = icRPM[0];
-			speedRPM[1] = icRPM[1];
-		}
+		
+		uint16_t sigHighCps;
+		float    sigLowRpm;
+		float	 measuredRpm;
 
+		// Router State Machine for each channel
+		// NOTE that the two sides of wheels can have different sampling methods (two independent sets of FSM)
+		for(i = 0; i < 2; i++)
+		{
+			switch (s_lastMethod[i])
+			{
+			case ENC_SAMP_METHOD_BY_ENC:
+				sigLowRpm   = ENC_LOW_SPEED_SWITCH_THRESHOLD_RPM  + ENC_LOW_SPEED_HYST_BAND_RPM;
+				sigHighCps  = ENC_HIGH_SPEED_SWITCH_THRESHOLD_CPS - ENC_HIGH_SPEED_HYST_BAND_CPS;
+				measuredRpm = encRPM[i];
+				break;
+			case ENC_SAMP_METHOD_BY_IC:
+				sigLowRpm   = ENC_LOW_SPEED_SWITCH_THRESHOLD_RPM  - ENC_LOW_SPEED_HYST_BAND_RPM;
+				sigHighCps  = ENC_HIGH_SPEED_SWITCH_THRESHOLD_CPS + ENC_HIGH_SPEED_HYST_BAND_CPS;
+				measuredRpm = icRPM[i];
+				break;
+			default:
+				break;
+			}
+			
+			// Unified State Transfer / Output-ing procedure based on readings
+			// note that the signals are decided by curr state (`switch` above)
+			if(((fabsf(measuredRpm) >= sigLowRpm) &&
+			    (fabsf(encCPS[i]) <= sigHighCps)))
+			{// measured abs val above the top of LOW zone AND below the bottom of HIGH zone --> hand over to IC
+				speedRPM[i]     = icRPM[i];
+				s_lastMethod[i] = ENC_SAMP_METHOD_BY_IC;
+			}
+			else
+			{// measured abs val below the top of LOW zone OR above the bottom of HIGH zone --> hand over to Enc
+				speedRPM[i]     = encRPM[i];
+				s_lastMethod[i] = ENC_SAMP_METHOD_BY_ENC;
+			}
+		}
+		
+		tg_method = s_lastMethod[0];
 		s_nextSampMs = nowMs + ENC_SPEED_SAMP_INTVL_MS;
 		return 1;
 	}
@@ -392,4 +446,3 @@ void Enc_ISR(void)
 		Enc_SampleSpeedByIC((void *)0, 1U, 0U);
 	}
 }
-
