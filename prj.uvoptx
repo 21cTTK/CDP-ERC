@@ -153,17 +153,12 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>g_RPM</ItemText>
+          <ItemText>tg_icRPM</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>t_duty</ItemText>
-        </Ww>
-        <Ww>
-          <count>2</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>clampedCCR,0x0A</ItemText>
+          <ItemText>tg_encRPM</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
