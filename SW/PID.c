@@ -6,7 +6,7 @@
 #define PID_CLAMP_MAX MOTOR_PWM_DUTY_MAX
 #define PID_INT_CLAMP_MIN -110.f / g_Ki
 #define PID_INT_CLAMP_MAX 110.f  / g_Ki
-#define PID_RAMP_STEP_SIZE 32.0f
+#define PID_RAMP_STEP_SIZE 64.0f
 
 #define PID_INITIAL_KP  0.5f
 #define PID_INITIAL_KI  0.12f
@@ -15,6 +15,7 @@ static float g_Kp;
 static float g_Ki;
 static float g_actualRPM[2];
 static float g_targetRPM[2];
+static float g_controlledPWM[2];
 
 void PID_Init(void)
 {
@@ -109,6 +110,9 @@ float* PID_Update(float* actualRPM, float* targetRPM, uint8_t shouldStop)
             controlOutPWM[i] = PID_CLAMP_MIN;
         }
     }
+
+    g_controlledPWM[0] = controlOutPWM[0];
+    g_controlledPWM[1] = controlOutPWM[1];
     
     //return control output
     return controlOutPWM;
@@ -132,6 +136,12 @@ void PID_GetTargetRPM(float* targetRPM)
 {
     targetRPM[0] = g_targetRPM[0];
     targetRPM[1] = g_targetRPM[1];
+}
+
+void PID_GetControlledPWM(float* controlledPWM)
+{
+    controlledPWM[0] = g_controlledPWM[0];
+    controlledPWM[1] = g_controlledPWM[1];
 }
 
 void PID_SetTargetRPM(float* targetRPM)

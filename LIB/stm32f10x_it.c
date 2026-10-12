@@ -26,6 +26,7 @@
 #include "cmtSys_TIM.h"
 #include "Keys.h"
 #include "HC05.h"
+#include "Enc.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
@@ -171,6 +172,11 @@ void USART3_IRQHandler(void)
     USART_ClearITPendingBit(USART3, USART_IT_RXNE);
     HC05_ISR();
   }
+}
+
+void TIM3_IRQHandler(void)
+{
+  Enc_ISR();
 }
 
 /**

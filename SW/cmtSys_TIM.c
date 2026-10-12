@@ -1,6 +1,9 @@
 #include "stm32f10x.h"
 #include "Keys.h"
 #include "LEDs.h"
+#include "Motion.h"
+#include "PID.h"
+#include "Enc.h"
 
 static uint32_t g_SysMs;
 
@@ -36,9 +39,25 @@ void CmtSysTim_ISR(void)
 {
 	g_SysMs++;
 
+    float    actualRPM[2];		//!< PID module: used to store the actual RPM value from @ref Enc_SampleSpeed
+    float    targetRPM[2];      //!< PID module: used to store the target RPM value from @ref Motion_SetTarget
+    float    controlledPWM[2];  //!< PID module: used to store the control output from @ref PID_Update
+
 	/* Prioritized Activities */
 	Key_CheckState_SysTick();			// uses inner counter
 	LED_CheckFlicker_SysTick(g_SysMs);	// depends on `g_SysMs`
+
+	PID_GetActualRPM(actualRPM);
+    PID_GetTargetRPM(targetRPM);
+	if(Enc_SampleSpeed_SysTick(actualRPM, g_SysMs) != 0)
+    {// yes we have a newly sampled speed; now up to PID
+        float *currStep      = PID_Ramp();
+        float *controlOutput = PID_Update(actualRPM, currStep, Motion_IsStopped());
+        
+        controlledPWM[0] = controlOutput[0];
+        controlledPWM[1] = controlOutput[1];
+        Motion_SetSpeed(controlledPWM);
+    }
 }
 
 uint32_t CmtSysTim_GetMs(void)
