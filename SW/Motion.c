@@ -2,7 +2,7 @@
 #include "PWM-Motor.h"
 #include "Motion.h"
 
-static uint8_t isStop;
+static uint8_t g_isStop;
 
 /// @brief initialize the motion control (and motor)
 void Motion_Init(void)
@@ -12,15 +12,18 @@ void Motion_Init(void)
 
 void Motion_SetStop(uint8_t stopState)
 {
-    uint8_t dirInput[MOTOR_PIN_COUNT] = {0, 0, 0, 0};
-    Motor_SetInput(dirInput);
+    g_isStop = stopState;
 
-    isStop = stopState;
+    if(stopState == 1)
+    {
+        uint8_t dirInput[MOTOR_PIN_COUNT] = {0, 0, 0, 0};
+        Motor_SetInput(dirInput);
+    }
 }
 
 uint8_t Motion_IsStopped(void)
 {
-    return isStop;
+    return g_isStop;
 }
 
 void Motion_SetSpeed(float *argv)

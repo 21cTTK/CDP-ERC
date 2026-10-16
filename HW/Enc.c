@@ -2,6 +2,7 @@
 #include "cmtSys_TIM.h"
 #include "Enc.h"
 #include <math.h>
+#include "PWM-Motor.h"
 
 volatile float 	  tg_icRPM;
 volatile uint16_t tg_encCPS;
@@ -32,6 +33,13 @@ volatile uint8_t  tg_method;
 #define ENC_LOW_SPEED_HYST_BAND_RPM			5.0f
 #define ENC_HIGH_SPEED_HYST_BAND_CPS		14U
 
+/* PID Tunables */
+#define ENC_PID_INITIAL_KP  	0.5f
+#define ENC_PID_INITIAL_KI  	0.05f
+#define ENC_PID_PTERM_CLAMP 	MOTOR_PWM_DUTY_MAX
+#define ENC_PID_ITERM_CLAMP     110.0f
+#define ENC_PID_RAMP_STEP_SIZE  64.0f
+
 /// @brief also serves as a state machine for speed sampling
 typedef enum __ENC_SAMPLE_METHODS_DEF_ENUM {
 	ENC_SAMP_METHOD_BY_ENC = 0,
@@ -39,6 +47,7 @@ typedef enum __ENC_SAMPLE_METHODS_DEF_ENUM {
 } EncSampMethodsDef_t;
 
 static volatile uint32_t g_WrapCount;	//!< Count how many counter wraps are there
+static PidParams_t  	 g_speedPID[2];		//!< PID params for both channels
 
 /// @brief Read in curr CNT and reset it to `ENC_CNT_ZERO_BASE`.
 /// @note - real CNT ticks are calculated based on delta with `ENC_CNT_ZERO_BASE` to prevent ovf/udf
@@ -133,6 +142,17 @@ void Enc_Init(void)
 	TIM_SetCounter(TIM1, ENC_CNT_ZERO_BASE);
 	TIM_SetCounter(TIM2, ENC_CNT_ZERO_BASE);
 	g_WrapCount = 0U;
+
+	// Initialize PID parameters
+	PidParams_t initPID;
+	PID_ClearParams(&initPID);
+	initPID.Kp = ENC_PID_INITIAL_KP;
+	initPID.Ki = ENC_PID_INITIAL_KI;
+	initPID.iTermClamp = ENC_PID_ITERM_CLAMP;
+	initPID.pTermClamp = ENC_PID_PTERM_CLAMP;
+	initPID.rampStep   = ENC_PID_RAMP_STEP_SIZE;
+	PID_CopyParams(&g_speedPID[0], &initPID);
+	PID_CopyParams(&g_speedPID[1], &initPID);
 
 	//TIM EN
 	TIM_Cmd(TIM1, ENABLE);
@@ -346,7 +366,7 @@ static void Enc_SampleSpeedByIC(float *speedRPM, uint8_t channel, uint8_t wen)
  * @return - `1` if speed was updated
  * @return - `0` otherwise
  */
-uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs)
+uint8_t Enc_SampleSpeed_SysTick(uint32_t nowMs)
 {
 	static uint8_t  s_firstSamp     = 1U;
 	static uint32_t s_nextSampMs    = 0;
@@ -407,12 +427,12 @@ uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs)
 			if(((fabsf(measuredRpm) >= sigLowRpm) &&
 			    (fabsf(encCPS[i]) <= sigHighCps)))
 			{// measured abs val above the top of LOW zone AND below the bottom of HIGH zone --> hand over to IC
-				speedRPM[i]     = icRPM[i];
+				g_speedPID[i].actual = icRPM[i];
 				s_lastMethod[i] = ENC_SAMP_METHOD_BY_IC;
 			}
 			else
 			{// measured abs val below the top of LOW zone OR above the bottom of HIGH zone --> hand over to Enc
-				speedRPM[i]     = encRPM[i];
+				g_speedPID[i].actual = encRPM[i];
 				s_lastMethod[i] = ENC_SAMP_METHOD_BY_ENC;
 			}
 		}
@@ -423,6 +443,20 @@ uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs)
 	}
 	else
 		return 0;
+}
+
+/* PID struct Interface */
+
+void Enc_GetSpeedPidParams(uint8_t channel, PidParams_t** paramsOut)
+{
+	if(channel < 2)
+	{
+		*paramsOut = &g_speedPID[channel];
+	}
+	else
+	{
+		PID_ClearParams(*paramsOut);
+	}
 }
 
 void Enc_ISR(void)

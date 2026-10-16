@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <math.h>
 
-#define HC05_PID_MSG_INTVL_MS    114
+#define HC05_PID_MSG_INTVL_MS    520U
 
 static uint32_t g_nextPidMsgMs;
 static char 	HC05_RxPacket[HC05_UART_PACKET_MAXLEN];
