@@ -1,3 +1,7 @@
-# Comprehensive Design Project - Electronic Remote-controlled Car
+# 嵌入式综设项目 - 机器人系统设计与实现（个人版）
 
-not yet...
+## 开发环境
+
+- 调试平台：Keil μVision V5.39.0.0
+- 目标芯片：STM32F103C8T6
+- 硬件配置：待补充
