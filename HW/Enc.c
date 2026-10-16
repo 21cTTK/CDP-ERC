@@ -445,6 +445,10 @@ void Enc_GetSpeedPidParams(uint8_t channel, PidParams_t** paramsOut)
 	{
 		*paramsOut = &g_speedPID[channel];
 	}
+	else
+	{
+		PID_ClearParams(*paramsOut);
+	}
 }
 
 void Enc_ISR(void)

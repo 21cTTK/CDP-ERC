@@ -10,32 +10,30 @@
 
 void PID_Ramp(PidParams_t* params)
 {
-    for(int i = 0; i < 2; i++)
-    {
+    if(params->rampPoint < params->setPoint)
+    {//forward ramping
+        params->rampPoint += PID_RAMP_STEP_SIZE;
+        if(params->rampPoint > params->setPoint)
+            params->rampPoint = params->setPoint;
+    }
+    else if(params->rampPoint > params->setPoint)
+    {//backward ramping
+        params->rampPoint -= PID_RAMP_STEP_SIZE;
         if(params->rampPoint < params->setPoint)
-        {//forward ramping
-            params->rampPoint += PID_RAMP_STEP_SIZE;
-            if(params->rampPoint > params->setPoint)
-                params->rampPoint = params->setPoint;
-        }
-        else if(params->rampPoint > params->setPoint)
-        {//backward ramping
-            params->rampPoint -= PID_RAMP_STEP_SIZE;
-            if(params->rampPoint < params->setPoint)
-                params->rampPoint = params->setPoint;
-        }
+            params->rampPoint = params->setPoint;
     }
 }
 
 void PID_Update(PidParams_t* params, uint8_t shouldStop)
 {
-    //compute curr error
-    float currError = params->rampPoint - params->actual;
-
     //if isStop is true, reset the integrated error
     if (shouldStop == 1) {
         PID_ClearParams(params);
+        return;
     }
+
+    //compute curr error
+    float currError = params->rampPoint - params->actual;
 
     //integrated error
     params->errorInt += currError;
@@ -90,6 +88,8 @@ void PID_ClearParams(PidParams_t *paramsDst)
         zeroPID.errorInt   = 0.0f;
         zeroPID.output     = 0.0f;
         zeroPID.rampPoint  = 0.0f;
+        zeroPID.Ki         = paramsDst->Ki; // keep the Ki value
+        zeroPID.Kp         = paramsDst->Kp; // keep the Kp value
 
         PID_WriteParams(paramsDst, (const PidParams_t*)&zeroPID);
     }

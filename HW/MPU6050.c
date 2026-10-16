@@ -3,7 +3,6 @@
 #include <math.h>
 #include "MPU6050.h"
 
-#define RAD_TO_DEG_CONST    		57.29577951308232f
 #define MPU6050_SAMPLE_INTVL_MS     114U
 
 /* MPU6050 Constants */
@@ -31,8 +30,10 @@
 #define MPU6050_WHO_AM_I            0x75U
 
 static uint8_t  	g_MPU6050_ready = 0U; // `1` if MPU6050 module is ready to be used; `0` otherwise
+static int8_t		g_MPU6050_msgReady = 0U; // `1` if MPU6050 module has a new message ready; `0` if not yet; `-1` if error occurred
 static uint32_t 	g_MPU6050_lastSampleMs = 0U; // last update timestamp in milliseconds
 static PidParams_t	g_yawPID; // PID params for yaw control
+static float		g_yawDps = 0.0f; // Yaw rate in degrees per second
 
 /* I2C Helper fn */
 
@@ -89,31 +90,35 @@ uint8_t MPU6050_ReadYawData(int16_t *data)
     //scq
 	if (data == 0)
 	{// invalid pointer
+		g_MPU6050_msgReady = -1;
 		return 1U;
 	}
 
 	if ( (MPU6050_ReadReg(MPU6050_GYRO_ZOUT_H, &high) == 0U) ||
 		 (MPU6050_ReadReg(MPU6050_GYRO_ZOUT_L, &low)  == 0U) )
 	{// can't retrieve some part(s) of gyro Yaw-axis data
+		g_MPU6050_msgReady = -1;
 		return 1U;
 	}
 
 	*data = (int16_t)(((uint16_t)high << 8) | low);
 
     g_MPU6050_ready = 1U; // set ready flag
+	g_MPU6050_msgReady = 1U;
 	return 0U; // data secured
 }
 
-void MPU6050_YawRawToDps(int16_t *rawIn, float *dpsOut)
+void MPU6050_YawRawToDps(int16_t rawIn)
 {
-    //scq
-	if (rawIn == 0 || dpsOut == 0)
-	{// invalid pointer
-		return;
-	}
+    g_yawDps = (float)((float)rawIn / MPU6050_GYRO_RAW_PER_DPS);
+}
 
-    // conversion
-	*dpsOut = (float)((float)*rawIn / MPU6050_GYRO_RAW_PER_DPS);
+void MPU6050_GetYawDps(float *dpsOut)
+{
+    if (dpsOut != 0)
+    {
+        *dpsOut = g_yawDps;
+    }
 }
 
 /// @return 1 if MPU6050 module is ready to be used; 0 otherwise
@@ -128,10 +133,27 @@ uint8_t MPU6050_SampleTimeReached(uint32_t nowMs)
     if ((nowMs - g_MPU6050_lastSampleMs) >= MPU6050_SAMPLE_INTVL_MS)
     {
         g_MPU6050_lastSampleMs = nowMs;
+		if(g_MPU6050_msgReady == 0)
+		{
+			g_MPU6050_msgReady = 1U;
+		}
         return 1U; // sample interval has elapsed
     }
     else
     {
         return 0U; // sample interval has not elapsed
     }
+}
+
+uint8_t MPU6050_IsMsgReady(void)
+{
+	if(g_MPU6050_msgReady == 1U)
+	{
+		g_MPU6050_msgReady = 0U; // reset the flag after reading
+		return 1U; // message is ready
+	}
+	else
+	{
+		return 0U; // message is not ready: hasn't been a new sample or the last sample is broken
+	}
 }

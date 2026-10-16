@@ -57,7 +57,6 @@ void CmtSys_Update()
     /* Intermediate Variables' Forward Decl Section */
     
     uint32_t     nowMs;                             //!< cmtSys_TIM module: provides system time
-    uint16_t     encCnt[2] = {0,0};                 //!< Encoder module: used to store the read-in CNT value. @ref Enc_GetCNT
     uint8_t      keyEvents[KEY_EV_COUNT];           //!< Keys module: @ref g_CurrKeyEV
     uint8_t      hc05RxFlag;                        //!< HC05 module: @ref HC05_RxFlag
     char         hc05Msg[HC05_UART_PACKET_MAXLEN];  //!< HC05 module: @ref HC05_RxPacket
@@ -74,7 +73,21 @@ void CmtSys_Update()
         Enc_GetSpeedPidParams(0, &speedPID[0]);
         Enc_GetSpeedPidParams(1, &speedPID[1]);
         HC05_SendStringFormatted("%f,%f,%f\r\n", speedPID[0]->actual, speedPID[0]->setPoint, speedPID[0]->output);
+
+        if(MPU6050_IsMsgReady() != 0U)
+        {// yes! we got it
+            float yawDps;
+            MPU6050_GetYawDps(&yawDps);
+            HC05_SendStringFormatted("YAW:%f.\r\n", yawDps);
+        }
     }
+
+    if(MPU6050_IsReady() == 0U)
+    {// Re-try initialization
+        MPU6050_Init();
+    }
+
+    HW_I2C_UpdateError(nowMs);
 
     /* Keys Module Action */
     
@@ -91,24 +104,26 @@ void CmtSys_Update()
         Enc_GetSpeedPidParams(1, &speedPID[1]);
         HC05_GetRxPacket(hc05Msg);
         LED_SetFlicker(nowMs, (LEDslot)LED_MSG_RX, 3, 114);
-        float speed[2];
+        float speedTarget[2] = {speedPID[0]->setPoint, speedPID[1]->setPoint};
 
         if (strncmp(hc05Msg, "KP+", 3) == 0)
         {
             float newKP = HC05_ParseMsgFloat(hc05Msg + 3);
             PID_WriteGains(speedPID[0], newKP, -1.0f);
+            PID_WriteGains(speedPID[1], newKP, -1.0f);
             HC05_SendStringFormatted("CMD:\"SET+KP\" - Y - KP=%f\r\n", newKP);
         }
         else if (strncmp(hc05Msg, "KI+", 3) == 0)
         {
             float newKI = HC05_ParseMsgFloat(hc05Msg + 3);
             PID_WriteGains(speedPID[0], -1.0f, newKI);
+            PID_WriteGains(speedPID[1], -1.0f, newKI);
             HC05_SendStringFormatted("CMD:\"SET+KI\" - Y - KI=%f\r\n", newKI);
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
-            speed[0] = 314.0f;
-            speed[1] = 314.0f;
+            speedTarget[0] = 314.0f;
+            speedTarget[1] = 314.0f;
 
             Motion_SetStop(0);
 
@@ -118,8 +133,8 @@ void CmtSys_Update()
         else if (strncmp(hc05Msg, "FORWARD+", 8) == 0)
         {
             float newSpeed = HC05_ParseMsgFloat(hc05Msg + 8);
-            speed[0] = newSpeed;
-            speed[1] = newSpeed;
+            speedTarget[0] = newSpeed;
+            speedTarget[1] = newSpeed;
 
             Motion_SetStop(0);
 
@@ -128,8 +143,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD_LEFT") == 0)
         {
-            speed[0] = 114.0f;
-            speed[1] = 314.0f;
+            speedTarget[0] = 114.0f;
+            speedTarget[1] = 314.0f;
 
             Motion_SetStop(0);
 
@@ -138,8 +153,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD_RIGHT") == 0)
         {
-			speed[0] = 314.0f;
-            speed[1] = 114.0f;
+			speedTarget[0] = 314.0f;
+            speedTarget[1] = 114.0f;
 			
             Motion_SetStop(0);
 
@@ -148,8 +163,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
-            speed[0] = -314.0f;
-            speed[1] = -314.0f;
+            speedTarget[0] = -314.0f;
+            speedTarget[1] = -314.0f;
 
             Motion_SetStop(0);
 
@@ -158,8 +173,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+STOP") == 0)
         {
-            speed[0] = 0.0f;
-            speed[1] = 0.0f;
+            speedTarget[0] = 0.0f;
+            speedTarget[1] = 0.0f;
 
             Motion_SetStop(1);
 
@@ -168,8 +183,8 @@ void CmtSys_Update()
         }
 		else if (strcmp(hc05Msg, "MOTION+PAUSE") == 0)
         {
-            speed[0] = 0.0f;
-            speed[1] = 0.0f;
+            speedTarget[0] = 0.0f;
+            speedTarget[1] = 0.0f;
 
             Motion_SetStop(0);
 
@@ -182,13 +197,13 @@ void CmtSys_Update()
             HC05_SendString("CMD:\"UNKNOWN.\" - N - Wtf is it even\r\n");
         }
 
-        PidParams_t* tempPID[2];
-        PID_WriteParams(tempPID[0], speedPID[0]);
-        PID_WriteParams(tempPID[1], speedPID[1]);
+        PidParams_t tempPID[2];
+        PID_WriteParams(&tempPID[0], speedPID[0]);
+        PID_WriteParams(&tempPID[1], speedPID[1]);
 
-        tempPID[0]->setPoint = speed[0];
-        tempPID[1]->setPoint = speed[1];
-        PID_WriteParams(speedPID[0], tempPID[0]);
-        PID_WriteParams(speedPID[1], tempPID[1]);
+        tempPID[0].setPoint = speedTarget[0];
+        tempPID[1].setPoint = speedTarget[1];
+        PID_WriteParams(speedPID[0], &tempPID[0]);
+        PID_WriteParams(speedPID[1], &tempPID[1]);
     }
 }

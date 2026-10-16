@@ -64,32 +64,16 @@ void CmtSysTim_ISR(void)
         Motion_SetSpeed(controlledPWM);
     }
 
-    if(MPU6050_IsReady() != 0U)
-    {// yep it can work
-        if(MPU6050_SampleTimeReached(g_SysMs) != 0U)
-        {// yep we should sample it
-    		int16_t  yawRaw;	//!< Yaw data.
-			float    yawDps;
+    if(MPU6050_IsReady() != 0U &&
+	   MPU6050_SampleTimeReached(g_SysMs) != 0U)
+    {// yep it can work and time to sample it
+		int16_t  yawRaw;	//!< Yaw data.
 
-            if(MPU6050_ReadYawData(&yawRaw) == 0U)
-            {// yes! we got it
-                MPU6050_YawRawToDps(&yawRaw, &yawDps);
-                HC05_SendStringFormatted("YAW:%f.\r\n", yawDps);
-            }
-            else
-            {// no! seems to have failed
-                HC05_SendString("YAW:ERROR.\r\n");
-            }
-        }
-        else;//wait until i want it
+		if(MPU6050_ReadYawData(&yawRaw) == 0U)
+		{// yes! we got it
+			MPU6050_YawRawToDps(yawRaw);
+		}
     }
-    else
-    {// Re-try initialization
-        MPU6050_Init();
-    }
-
-    HW_I2C_UpdateError(g_SysMs);
-
 }
 
 uint32_t CmtSysTim_GetMs(void)
