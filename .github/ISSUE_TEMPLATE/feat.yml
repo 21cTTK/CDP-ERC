@@ -1,0 +1,50 @@
+name: Feat
+description: schedule a feat to be integrated
+title: "[Feat.] "
+labels:
+  - feat
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Brief the feat for the title.
+
+  - type: textarea
+    id: brf
+    attributes:
+      label: Brief
+      description: Short summary of the issue
+      placeholder: Write sth or quote the Title
+    validations:
+      required: true
+
+  - type: textarea
+    id: hyw
+    attributes:
+      label: What's for?
+      description: Why do we need this feature?
+      placeholder: Details about the feature
+    validations:
+      required: true
+
+  - type: textarea
+    id: sol
+    attributes:
+      label: How to?
+      description: What's the curr plan for implementation
+      placeholder: Is preferred to ref to sth
+
+  - type: textarea
+    id: alt
+    attributes:
+      label: Must we?
+      description: Is there any workaround or alternative method?
+      placeholder: Describe whether this feature is essential to the project
+  
+  - type: textarea
+    id: add
+    attributes:
+      label: To add?
+      description: Anything to add then?
+      placeholder: Supplementary notes on this issue.
