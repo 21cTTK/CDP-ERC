@@ -4,6 +4,7 @@
 #include "Motion.h"
 #include "PID.h"
 #include "Enc.h"
+#include "MPU6050.h"
 
 static uint32_t g_SysMs;
 
@@ -39,25 +40,56 @@ void CmtSysTim_ISR(void)
 {
 	g_SysMs++;
 
-    float    actualRPM[2];		//!< PID module: used to store the actual RPM value from @ref Enc_SampleSpeed
-    float    targetRPM[2];      //!< PID module: used to store the target RPM value from @ref Motion_SetTarget
-    float    controlledPWM[2];  //!< PID module: used to store the control output from @ref PID_Update
-
 	/* Prioritized Activities */
 	Key_CheckState_SysTick();			// uses inner counter
 	LED_CheckFlicker_SysTick(g_SysMs);	// depends on `g_SysMs`
 
-	PID_GetActualRPM(actualRPM);
-    PID_GetTargetRPM(targetRPM);
-	if(Enc_SampleSpeed_SysTick(actualRPM, g_SysMs) != 0)
+	if(Enc_SampleSpeed_SysTick(g_SysMs) != 0)
     {// yes we have a newly sampled speed; now up to PID
-        float *currStep      = PID_Ramp();
-        float *controlOutput = PID_Update(actualRPM, currStep, Motion_IsStopped());
-        
-        controlledPWM[0] = controlOutput[0];
-        controlledPWM[1] = controlOutput[1];
+		PidParams_t* speedPID[2];
+		float 		 controlledPWM[2];
+
+		Enc_GetSpeedPidParams(0, &speedPID[0]);
+		Enc_GetSpeedPidParams(1, &speedPID[1]);
+
+		PID_Ramp(speedPID[0]);
+		PID_Ramp(speedPID[1]);
+
+		PID_Update(speedPID[0], Motion_IsStopped());
+		PID_Update(speedPID[1], Motion_IsStopped());
+
+		controlledPWM[0] = speedPID[0]->output;
+		controlledPWM[1] = speedPID[1]->output;
+
         Motion_SetSpeed(controlledPWM);
     }
+
+    if(MPU6050_IsReady() != 0U)
+    {// yep it can work
+        if(MPU6050_SampleTimeReached(g_SysMs) != 0U)
+        {// yep we should sample it
+    		int16_t  yawRaw;	//!< Yaw data.
+			float    yawDps;
+
+            if(MPU6050_ReadYawData(&yawRaw) == 0U)
+            {// yes! we got it
+                MPU6050_YawRawToDps(&yawRaw, &yawDps);
+                HC05_SendStringFormatted("YAW:%f.\r\n", yawDps);
+            }
+            else
+            {// no! seems to have failed
+                HC05_SendString("YAW:ERROR.\r\n");
+            }
+        }
+        else;//wait until i want it
+    }
+    else
+    {// Re-try initialization
+        MPU6050_Init();
+    }
+
+    HW_I2C_UpdateError(g_SysMs);
+
 }
 
 uint32_t CmtSysTim_GetMs(void)

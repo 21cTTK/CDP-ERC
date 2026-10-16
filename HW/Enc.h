@@ -1,6 +1,7 @@
 #ifndef __ENC_H
 #define __ENC_H
 
+#include "PID.h"
 #include <stdint.h>
 
 /* TIM3 IC Timer Macro */
@@ -13,7 +14,8 @@
 #define ENC_IC_WRAP_US	(ENC_IC_PWM_ARR * ENC_IC_TICK_US)	//!< us per CNT wrap
 
 void Enc_Init(void);
-uint8_t Enc_SampleSpeed_SysTick(float *speedRPM, uint32_t nowMs);
+uint8_t Enc_SampleSpeed_SysTick(uint32_t nowMs);
+void Enc_GetSpeedPidParams(uint8_t channel, PidParams_t** paramsOut);
 void Enc_ISR(void);
 
 #endif//__ENC_H

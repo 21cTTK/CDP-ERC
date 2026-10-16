@@ -1,9 +1,10 @@
 #include "stm32f10x.h"
 #include "HW_I2C.h"
 #include <math.h>
+#include "MPU6050.h"
 
-#define RAD_TO_DEG_CONST    57.29577951308232f
-#define MPU6050_SAMPLE_INTVL_MS     1145U
+#define RAD_TO_DEG_CONST    		57.29577951308232f
+#define MPU6050_SAMPLE_INTVL_MS     114U
 
 /* MPU6050 Constants */
 #define MPU6050_GYRO_RAW_PER_DPS    16.4f
@@ -29,8 +30,9 @@
 #define MPU6050_PWR_MGMT_2          0x6CU
 #define MPU6050_WHO_AM_I            0x75U
 
-static uint8_t  g_MPU6050_ready = 0U; // `1` if MPU6050 module is ready to be used; `0` otherwise
-static uint32_t g_MPU6050_lastSampleMs = 0U; // last update timestamp in milliseconds
+static uint8_t  	g_MPU6050_ready = 0U; // `1` if MPU6050 module is ready to be used; `0` otherwise
+static uint32_t 	g_MPU6050_lastSampleMs = 0U; // last update timestamp in milliseconds
+static PidParams_t	g_yawPID; // PID params for yaw control
 
 /* I2C Helper fn */
 
@@ -102,16 +104,16 @@ uint8_t MPU6050_ReadYawData(int16_t *data)
 	return 0U; // data secured
 }
 
-void MPU6050_YawRawToDps(int16_t *raw)
+void MPU6050_YawRawToDps(int16_t *rawIn, float *dpsOut)
 {
     //scq
-	if (raw == 0)
+	if (rawIn == 0 || dpsOut == 0)
 	{// invalid pointer
 		return;
 	}
 
     // conversion
-	*raw = (int16_t)((float)*raw / MPU6050_GYRO_RAW_PER_DPS);
+	*dpsOut = (float)((float)*rawIn / MPU6050_GYRO_RAW_PER_DPS);
 }
 
 /// @return 1 if MPU6050 module is ready to be used; 0 otherwise

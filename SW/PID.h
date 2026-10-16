@@ -3,13 +3,20 @@
 
 #include <stdint.h>
 
-void PID_Init(void);
-float* PID_Ramp(void);
-float* PID_Update(float* actualRPM, float* targetRPM, uint8_t shouldStop);
-void PID_SetGains(float Kp, float Ki);
-void PID_GetActualRPM(float* actualRPM);
-void PID_GetTargetRPM(float* targetRPM);
-void PID_SetTargetRPM(float* targetRPM);
-void PID_GetControlledPWM(float* controlledPWM);
+typedef struct __PID_PARAMS_STRUCT {
+    float Kp;
+    float Ki;
+    float actual;
+    float setPoint;
+    float errorInt;
+    float output;
+    float rampPoint;
+} PidParams_t;
+
+void PID_Ramp(PidParams_t* params);
+void PID_Update(PidParams_t* params, uint8_t shouldStop);
+void PID_WriteGains(PidParams_t* paramsDst, float Kp, float Ki);
+void PID_WriteParams(PidParams_t* paramsDst, const PidParams_t* paramsSrc);
+void PID_ClearParams(PidParams_t* params);
 
 #endif//__PID_H
