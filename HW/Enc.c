@@ -35,7 +35,7 @@ volatile uint8_t  tg_method;
 
 /* PID Tunables */
 #define ENC_PID_INITIAL_KP  	0.5f
-#define ENC_PID_INITIAL_KI  	0.12f
+#define ENC_PID_INITIAL_KI  	0.05f
 #define ENC_PID_PTERM_CLAMP 	MOTOR_PWM_DUTY_MAX
 #define ENC_PID_ITERM_CLAMP     110.0f
 #define ENC_PID_RAMP_STEP_SIZE  64.0f

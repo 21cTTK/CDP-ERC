@@ -9,6 +9,7 @@
 
 static uint32_t g_SysMs;
 volatile float tg_offsetRPM;
+volatile float etg_actualSet;
 
 void CmtSysTim_Init(void)
 {
@@ -52,6 +53,7 @@ void CmtSysTim_ISR(void)
 		PidParams_t* offsetPID;
 		uint8_t      shouldStop;
 		float        savedRampPointL;
+		float		 savedRampPointR;
 		float 		 controlledPWM[2];
 
 		Enc_GetSpeedPidParams(0, &speedPID[0]);
@@ -62,17 +64,12 @@ void CmtSysTim_ISR(void)
 		PID_Ramp(speedPID[1]);
 
 		savedRampPointL = speedPID[0]->rampPoint;
+		savedRampPointR = speedPID[1]->rampPoint;
 
 		// can't rotate in reverse
-		if((fabsf(savedRampPointL) <= fabsf(offsetPID->output)) &&
-		   (savedRampPointL * offsetPID->output > 0.0f))
-		{
-			speedPID[0]->rampPoint = 0.0f;
-		}
-		else
-		{
-			speedPID[0]->rampPoint -= offsetPID->output;
-		}
+		speedPID[0]->rampPoint -= offsetPID->output;
+		speedPID[1]->rampPoint += offsetPID->output;
+		etg_actualSet = speedPID[0]->rampPoint;
 
 		shouldStop = Motion_IsStopped();
 		PID_Update(speedPID[0], shouldStop);
@@ -82,6 +79,7 @@ void CmtSysTim_ISR(void)
 		if(shouldStop == 0U)
 		{// undo a live trim
 			speedPID[0]->rampPoint = savedRampPointL;
+			speedPID[1]->rampPoint = savedRampPointR;
 		}
 
 		controlledPWM[0] = speedPID[0]->output;

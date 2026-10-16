@@ -75,7 +75,7 @@ void CmtSys_Update()
     {
         Enc_GetSpeedPidParams(0, &speedPID[0]);
         Enc_GetSpeedPidParams(1, &speedPID[1]);
-        HC05_SendStringFormatted("%f,%f,%f\r\n", speedPID[0]->actual, speedPID[0]->setPoint, speedPID[0]->output);
+        HC05_SendStringFormatted("%f,%f,%f\r\n", speedPID[0]->actual, etg_actualSet, speedPID[0]->output);
 
         if(MPU6050_IsMsgReady() != 0U)
         {// yes! we got it; the yaw rate now lives in the MPU6050 offset PID's `actual`
@@ -182,6 +182,28 @@ void CmtSys_Update()
 
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD_RIGHT\" - Y - Succeeded\r\n");
+        }
+        else if (strcmp(hc05Msg, "MOTION+LEFT") == 0)
+        {
+            speedTarget[0] = -314.0f;
+            speedTarget[1] = 114.0f;
+            offsetTarget   = 114.0f;
+
+            Motion_SetStop(0);
+
+            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
+            HC05_SendString("CMD:\"MOTION+LEFT\" - Y - Succeeded\r\n");
+        }
+        else if (strcmp(hc05Msg, "MOTION+RIGHT") == 0)
+        {
+            speedTarget[0] = 314.0f;
+            speedTarget[1] = -114.0f;
+            offsetTarget   = -114.0f;
+
+            Motion_SetStop(0);
+
+            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
+            HC05_SendString("CMD:\"MOTION+RIGHT\" - Y - Succeeded\r\n");
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
