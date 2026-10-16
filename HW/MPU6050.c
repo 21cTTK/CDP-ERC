@@ -4,9 +4,9 @@
 #include "MPU6050.h"
 
 #define MPU6050_SAMPLE_INTVL_MS			15U
-#define MPU6050_GYRO_OFFSET_DPS			1.14f
-#define MPU6050_PID_INITIAL_KP      	2.4f
-#define MPU6050_PID_INITIAL_KI      	0.3f
+#define MPU6050_GYRO_INIT_OFFSET_DPS	0.94f
+#define MPU6050_PID_INITIAL_KP      	3.1415926f
+#define MPU6050_PID_INITIAL_KI      	0.52f
 #define MPU6050_PID_PTERM_CLAMP_PRM     114.0f
 #define MPU6050_PID_ITERM_CLAMP_RPM     114.0f
 #define MPU6050_PID_RAMP_SIZE_DPS  		5.0f
@@ -39,6 +39,7 @@
 static uint8_t  	g_MPU6050_ready = 0U; // `1` if MPU6050 module is ready to be used; `0` otherwise
 static int8_t		g_MPU6050_msgReady = 0U; // `1` if MPU6050 module has a new message ready; `0` if not yet; `-1` if error occurred
 static uint32_t 	g_MPU6050_lastSampleMs = 0U; // last update timestamp in milliseconds
+static float		g_MPU6050_gyroOffsetDps = 0.0f;
 static PidParams_t	g_offsetPID; // PID params for yaw control
 
 volatile float tg_yawDps;
@@ -91,6 +92,7 @@ uint8_t MPU6050_Init(void)
 	initPID.rampStep   = MPU6050_PID_RAMP_SIZE_DPS;
 	PID_CopyParams(&g_offsetPID, &initPID);
 
+	g_MPU6050_gyroOffsetDps = MPU6050_GYRO_INIT_OFFSET_DPS;
     g_MPU6050_ready = 1U; // set ready flag
     return (uint8_t)(!(id == MPU6050_ID));
 }
@@ -129,7 +131,7 @@ void MPU6050_YawRawToDps(int16_t rawIn)
 {
 	static float s_filteredYawDps = 0.0f;
 
-	float currYawDps = (float)((float)rawIn / MPU6050_GYRO_RAW_PER_DPS) + MPU6050_GYRO_OFFSET_DPS;
+	float currYawDps = (float)((float)rawIn / MPU6050_GYRO_RAW_PER_DPS) + g_MPU6050_gyroOffsetDps;
 
 	if(s_filteredYawDps == 0.0f)
 		s_filteredYawDps = currYawDps;
@@ -180,4 +182,9 @@ uint8_t MPU6050_IsMsgReady(void)
 void MPU6050_GetOffsetPidParams(PidParams_t **paramsOut)
 {
 	*paramsOut = &g_offsetPID;
+}
+
+void MPU6050_WriteOffset(float offset)
+{
+	g_MPU6050_gyroOffsetDps = offset;
 }

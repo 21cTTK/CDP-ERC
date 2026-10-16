@@ -138,10 +138,16 @@ void CmtSys_Update()
             PID_WriteGains(offsetPID, -1.0f, newKI);
             HC05_SendStringFormatted("CMD:\"SET+YAWKI\" - Y - KI=%f\r\n", offsetPID->Ki);
         }
+        else if (strncmp(hc05Msg, "YAWOFFSET+", 10) == 0)
+        {
+            float newOffset = HC05_ParseMsgFloat(hc05Msg + 10);
+            MPU6050_WriteOffset(newOffset);
+            HC05_SendStringFormatted("CMD:\"SET+YAWOFFSET\" - Y - OFFSET=%f\r\n", newOffset);
+        }
         else if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
-            speedTarget[0] = 114.0f;
-            speedTarget[1] = 114.0f;
+            speedTarget[0] = 240.0f;
+            speedTarget[1] = 240.0f;
             offsetTarget   = 0.0f;
 
             Motion_SetStop(0);
@@ -161,32 +167,10 @@ void CmtSys_Update()
             LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
             HC05_SendString("CMD:\"MOTION+FORWARD\" - Y - Succeeded\r\n");
         }
-        else if (strcmp(hc05Msg, "MOTION+FORWARD_LEFT") == 0)
-        {
-            speedTarget[0] = 114.0f;
-            speedTarget[1] = 114.0f;
-            offsetTarget   = 11.4f;
-
-            Motion_SetStop(0);
-
-            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
-            HC05_SendString("CMD:\"MOTION+FORWARD_LEFT\" - Y - Succeeded\r\n");
-        }
-        else if (strcmp(hc05Msg, "MOTION+FORWARD_RIGHT") == 0)
-        {
-			speedTarget[0] = 114.0f;
-            speedTarget[1] = 114.0f;
-            offsetTarget   = -11.4f;
-			
-            Motion_SetStop(0);
-
-            LED_SetFlicker(nowMs, (LEDslot)LED_CMD_EXEC, 3, 114);
-            HC05_SendString("CMD:\"MOTION+FORWARD_RIGHT\" - Y - Succeeded\r\n");
-        }
         else if (strcmp(hc05Msg, "MOTION+LEFT") == 0)
         {
-            speedTarget[0] = -314.0f;
-            speedTarget[1] = 114.0f;
+            speedTarget[0] = -114.0f;
+            speedTarget[1] = 314.0f;
             offsetTarget   = 114.0f;
 
             Motion_SetStop(0);
@@ -196,8 +180,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+RIGHT") == 0)
         {
-            speedTarget[0] = 314.0f;
-            speedTarget[1] = -114.0f;
+            speedTarget[0] = 114.0f;
+            speedTarget[1] = -314.0f;
             offsetTarget   = -114.0f;
 
             Motion_SetStop(0);
@@ -207,8 +191,8 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
-            speedTarget[0] = -114.0f;
-            speedTarget[1] = -114.0f;
+            speedTarget[0] = -240.0f;
+            speedTarget[1] = -240.0f;
             offsetTarget   = 0.0f;
 
             Motion_SetStop(0);
