@@ -5,8 +5,10 @@
 #include "PID.h"
 #include "Enc.h"
 #include "MPU6050.h"
+#include <math.h>
 
 static uint32_t g_SysMs;
+volatile float tg_offsetRPM;
 
 void CmtSysTim_Init(void)
 {
@@ -47,16 +49,40 @@ void CmtSysTim_ISR(void)
 	if(Enc_SampleSpeed_SysTick(g_SysMs) != 0)
     {// yes we have a newly sampled speed; now up to PID
 		PidParams_t* speedPID[2];
+		PidParams_t* offsetPID;
+		uint8_t      shouldStop;
+		float        savedRampPointL;
 		float 		 controlledPWM[2];
 
 		Enc_GetSpeedPidParams(0, &speedPID[0]);
 		Enc_GetSpeedPidParams(1, &speedPID[1]);
+		MPU6050_GetOffsetPidParams(&offsetPID);
 
 		PID_Ramp(speedPID[0]);
 		PID_Ramp(speedPID[1]);
 
-		PID_Update(speedPID[0], Motion_IsStopped());
-		PID_Update(speedPID[1], Motion_IsStopped());
+		savedRampPointL = speedPID[0]->rampPoint;
+
+		// can't rotate in reverse
+		if((fabsf(savedRampPointL) <= fabsf(offsetPID->output)) &&
+		   (savedRampPointL * offsetPID->output > 0.0f))
+		{
+			speedPID[0]->rampPoint = 0.0f;
+		}
+		else
+		{
+			speedPID[0]->rampPoint -= offsetPID->output;
+		}
+
+		shouldStop = Motion_IsStopped();
+		PID_Update(speedPID[0], shouldStop);
+		PID_Update(speedPID[1], shouldStop);
+
+		// prevent accumulation of the trim: Update with trimmed value and reset to original value
+		if(shouldStop == 0U)
+		{// undo a live trim
+			speedPID[0]->rampPoint = savedRampPointL;
+		}
 
 		controlledPWM[0] = speedPID[0]->output;
 		controlledPWM[1] = speedPID[1]->output;
@@ -64,14 +90,28 @@ void CmtSysTim_ISR(void)
         Motion_SetSpeed(controlledPWM);
     }
 
-    if(MPU6050_IsReady() != 0U &&
-	   MPU6050_SampleTimeReached(g_SysMs) != 0U)
+    if((MPU6050_IsReady() != 0U) &&
+	   (MPU6050_SampleTimeReached(g_SysMs)) != 0U)
     {// yep it can work and time to sample it
+		// MPU6050's PID produces an offset speed on the left wheel to compensate for yaw
+		// which stacks on Enc's PID
+		PidParams_t* speedPID;
+		PidParams_t* offsetPID;
+		uint8_t shouldStop;
 		int16_t  yawRaw;	//!< Yaw data.
 
 		if(MPU6050_ReadYawData(&yawRaw) == 0U)
 		{// yes! we got it
 			MPU6050_YawRawToDps(yawRaw);
+
+			MPU6050_GetOffsetPidParams(&offsetPID);
+			Enc_GetSpeedPidParams(0, &speedPID);
+
+			PID_Ramp(offsetPID);
+
+			shouldStop = (Motion_IsStopped() || speedPID->setPoint == 0.0f);
+			PID_Update(offsetPID, shouldStop);
+			tg_offsetRPM = offsetPID->output;	// for debug			
 		}
     }
 }

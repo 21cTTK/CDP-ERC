@@ -3,7 +3,14 @@
 #include <math.h>
 #include "MPU6050.h"
 
-#define MPU6050_SAMPLE_INTVL_MS     114U
+#define MPU6050_SAMPLE_INTVL_MS			15U
+#define MPU6050_GYRO_OFFSET_DPS			0.91f
+#define MPU6050_PID_INITIAL_KP      	0.5f
+#define MPU6050_PID_INITIAL_KI      	0.01f
+#define MPU6050_PID_PTERM_CLAMP_PRM     114.0f
+#define MPU6050_PID_ITERM_CLAMP_RPM     114.0f
+#define MPU6050_PID_RAMP_SIZE_DPS  		5.0f
+#define MPU6050_YAW_FILTER_COEF         0.78f
 
 /* MPU6050 Constants */
 #define MPU6050_GYRO_RAW_PER_DPS    16.4f
@@ -32,8 +39,9 @@
 static uint8_t  	g_MPU6050_ready = 0U; // `1` if MPU6050 module is ready to be used; `0` otherwise
 static int8_t		g_MPU6050_msgReady = 0U; // `1` if MPU6050 module has a new message ready; `0` if not yet; `-1` if error occurred
 static uint32_t 	g_MPU6050_lastSampleMs = 0U; // last update timestamp in milliseconds
-static PidParams_t	g_yawPID; // PID params for yaw control
-static float		g_yawDps = 0.0f; // Yaw rate in degrees per second
+static PidParams_t	g_offsetPID; // PID params for yaw control
+
+volatile float tg_yawDps;
 
 /* I2C Helper fn */
 
@@ -74,6 +82,15 @@ uint8_t MPU6050_Init(void)
 		return 1U;
 	}
 
+	PidParams_t initPID;
+	PID_ClearParams(&initPID);
+	initPID.Ki = MPU6050_PID_INITIAL_KI;
+	initPID.Kp = MPU6050_PID_INITIAL_KP;
+	initPID.iTermClamp = MPU6050_PID_ITERM_CLAMP_RPM;
+	initPID.pTermClamp = MPU6050_PID_PTERM_CLAMP_PRM;
+	initPID.rampStep   = MPU6050_PID_RAMP_SIZE_DPS;
+	PID_CopyParams(&g_offsetPID, &initPID);
+
     g_MPU6050_ready = 1U; // set ready flag
     return (uint8_t)(!(id == MPU6050_ID));
 }
@@ -110,15 +127,17 @@ uint8_t MPU6050_ReadYawData(int16_t *data)
 
 void MPU6050_YawRawToDps(int16_t rawIn)
 {
-    g_yawDps = (float)((float)rawIn / MPU6050_GYRO_RAW_PER_DPS);
-}
+	static float s_filteredYawDps = 0.0f;
 
-void MPU6050_GetYawDps(float *dpsOut)
-{
-    if (dpsOut != 0)
-    {
-        *dpsOut = g_yawDps;
-    }
+	float currYawDps = (float)((float)rawIn / MPU6050_GYRO_RAW_PER_DPS) + MPU6050_GYRO_OFFSET_DPS;
+
+	if(s_filteredYawDps == 0.0f)
+		s_filteredYawDps = currYawDps;
+	else
+		s_filteredYawDps = MPU6050_YAW_FILTER_COEF * (currYawDps - s_filteredYawDps);
+
+    g_offsetPID.actual = s_filteredYawDps;
+	tg_yawDps = currYawDps;
 }
 
 /// @return 1 if MPU6050 module is ready to be used; 0 otherwise
@@ -156,4 +175,9 @@ uint8_t MPU6050_IsMsgReady(void)
 	{
 		return 0U; // message is not ready: hasn't been a new sample or the last sample is broken
 	}
+}
+
+void MPU6050_GetOffsetPidParams(PidParams_t **paramsOut)
+{
+	*paramsOut = &g_offsetPID;
 }

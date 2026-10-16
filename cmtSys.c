@@ -12,6 +12,8 @@
 #include "PID.h"
 #include <string.h>
 
+volatile float tg_yawReading;
+
 void CmtSys_Init()
 {
     /* Module Init */
@@ -61,6 +63,7 @@ void CmtSys_Update()
     uint8_t      hc05RxFlag;                        //!< HC05 module: @ref HC05_RxFlag
     char         hc05Msg[HC05_UART_PACKET_MAXLEN];  //!< HC05 module: @ref HC05_RxPacket
     PidParams_t* speedPID[2];                   //!< PID module: @ref g_speedPID
+    PidParams_t* offsetPID;
 
     /* `Update()` Section */
 
@@ -75,10 +78,10 @@ void CmtSys_Update()
         HC05_SendStringFormatted("%f,%f,%f\r\n", speedPID[0]->actual, speedPID[0]->setPoint, speedPID[0]->output);
 
         if(MPU6050_IsMsgReady() != 0U)
-        {// yes! we got it
-            float yawDps;
-            MPU6050_GetYawDps(&yawDps);
-            HC05_SendStringFormatted("YAW:%f.\r\n", yawDps);
+        {// yes! we got it; the yaw rate now lives in the MPU6050 offset PID's `actual`
+            MPU6050_GetOffsetPidParams(&offsetPID);
+			tg_yawReading = offsetPID->actual;
+            HC05_SendStringFormatted("YAW:%f.\r\n", offsetPID->actual);
         }
     }
 
@@ -102,9 +105,12 @@ void CmtSys_Update()
     {
         Enc_GetSpeedPidParams(0, &speedPID[0]);
         Enc_GetSpeedPidParams(1, &speedPID[1]);
+        MPU6050_GetOffsetPidParams(&offsetPID);
         HC05_GetRxPacket(hc05Msg);
         LED_SetFlicker(nowMs, (LEDslot)LED_MSG_RX, 3, 114);
+
         float speedTarget[2] = {speedPID[0]->setPoint, speedPID[1]->setPoint};
+        float offsetTarget   = offsetPID->setPoint;
 
         if (strncmp(hc05Msg, "KP+", 3) == 0)
         {
@@ -120,10 +126,23 @@ void CmtSys_Update()
             PID_WriteGains(speedPID[1], -1.0f, newKI);
             HC05_SendStringFormatted("CMD:\"SET+KI\" - Y - KI=%f\r\n", newKI);
         }
+        else if (strncmp(hc05Msg, "YAWKP+", 6) == 0)
+        {
+            float newKP = HC05_ParseMsgFloat(hc05Msg + 6);
+            PID_WriteGains(offsetPID, newKP, -1.0f);
+            HC05_SendStringFormatted("CMD:\"SET+YAWKP\" - Y - KP=%f\r\n", offsetPID->Kp);
+        }
+        else if (strncmp(hc05Msg, "YAWKI+", 6) == 0)
+        {
+            float newKI = HC05_ParseMsgFloat(hc05Msg + 6);
+            PID_WriteGains(offsetPID, -1.0f, newKI);
+            HC05_SendStringFormatted("CMD:\"SET+YAWKI\" - Y - KI=%f\r\n", offsetPID->Ki);
+        }
         else if (strcmp(hc05Msg, "MOTION+FORWARD") == 0)
         {
-            speedTarget[0] = 314.0f;
-            speedTarget[1] = 314.0f;
+            speedTarget[0] = 114.0f;
+            speedTarget[1] = 114.0f;
+            offsetTarget   = 0.0f;
 
             Motion_SetStop(0);
 
@@ -135,6 +154,7 @@ void CmtSys_Update()
             float newSpeed = HC05_ParseMsgFloat(hc05Msg + 8);
             speedTarget[0] = newSpeed;
             speedTarget[1] = newSpeed;
+            offsetTarget   = 0.0f;
 
             Motion_SetStop(0);
 
@@ -144,7 +164,8 @@ void CmtSys_Update()
         else if (strcmp(hc05Msg, "MOTION+FORWARD_LEFT") == 0)
         {
             speedTarget[0] = 114.0f;
-            speedTarget[1] = 314.0f;
+            speedTarget[1] = 114.0f;
+            offsetTarget   = 11.4f;
 
             Motion_SetStop(0);
 
@@ -153,8 +174,9 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+FORWARD_RIGHT") == 0)
         {
-			speedTarget[0] = 314.0f;
+			speedTarget[0] = 114.0f;
             speedTarget[1] = 114.0f;
+            offsetTarget   = -11.4f;
 			
             Motion_SetStop(0);
 
@@ -163,8 +185,9 @@ void CmtSys_Update()
         }
         else if (strcmp(hc05Msg, "MOTION+BACKWARD") == 0)
         {
-            speedTarget[0] = -314.0f;
-            speedTarget[1] = -314.0f;
+            speedTarget[0] = -114.0f;
+            speedTarget[1] = -114.0f;
+            offsetTarget   = 0.0f;
 
             Motion_SetStop(0);
 
@@ -175,6 +198,7 @@ void CmtSys_Update()
         {
             speedTarget[0] = 0.0f;
             speedTarget[1] = 0.0f;
+            offsetTarget   = 0.0f;
 
             Motion_SetStop(1);
 
@@ -185,6 +209,7 @@ void CmtSys_Update()
         {
             speedTarget[0] = 0.0f;
             speedTarget[1] = 0.0f;
+            offsetTarget   = 0.0f;
 
             Motion_SetStop(0);
 
@@ -205,5 +230,8 @@ void CmtSys_Update()
         tempPID[1].setPoint = speedTarget[1];
         PID_WriteParams(speedPID[0], &tempPID[0]);
         PID_WriteParams(speedPID[1], &tempPID[1]);
+
+        //the yaw target MUST land in the offset PID, or the loop keeps regulating yaw to 0
+        offsetPID->setPoint = offsetTarget;
     }
 }

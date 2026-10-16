@@ -2,7 +2,7 @@
 #include "cmtSys_TIM.h"
 #include "Enc.h"
 #include <math.h>
-
+#include "PWM-Motor.h"
 
 volatile float 	  tg_icRPM;
 volatile uint16_t tg_encCPS;
@@ -34,8 +34,11 @@ volatile uint8_t  tg_method;
 #define ENC_HIGH_SPEED_HYST_BAND_CPS		14U
 
 /* PID Tunables */
-#define ENC_PID_INITIAL_KP  0.5f
-#define ENC_PID_INITIAL_KI  0.12f
+#define ENC_PID_INITIAL_KP  	0.5f
+#define ENC_PID_INITIAL_KI  	0.12f
+#define ENC_PID_PTERM_CLAMP 	MOTOR_PWM_DUTY_MAX
+#define ENC_PID_ITERM_CLAMP     110.0f
+#define ENC_PID_RAMP_STEP_SIZE  64.0f
 
 /// @brief also serves as a state machine for speed sampling
 typedef enum __ENC_SAMPLE_METHODS_DEF_ENUM {
@@ -141,10 +144,15 @@ void Enc_Init(void)
 	g_WrapCount = 0U;
 
 	// Initialize PID parameters
-	PID_ClearParams(&g_speedPID[0]);
-	PID_ClearParams(&g_speedPID[1]);
-	PID_WriteGains(&g_speedPID[0], ENC_PID_INITIAL_KP, ENC_PID_INITIAL_KI);
-	PID_WriteGains(&g_speedPID[1], ENC_PID_INITIAL_KP, ENC_PID_INITIAL_KI);
+	PidParams_t initPID;
+	PID_ClearParams(&initPID);
+	initPID.Kp = ENC_PID_INITIAL_KP;
+	initPID.Ki = ENC_PID_INITIAL_KI;
+	initPID.iTermClamp = ENC_PID_ITERM_CLAMP;
+	initPID.pTermClamp = ENC_PID_PTERM_CLAMP;
+	initPID.rampStep   = ENC_PID_RAMP_STEP_SIZE;
+	PID_CopyParams(&g_speedPID[0], &initPID);
+	PID_CopyParams(&g_speedPID[1], &initPID);
 
 	//TIM EN
 	TIM_Cmd(TIM1, ENABLE);

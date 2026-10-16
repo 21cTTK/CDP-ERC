@@ -1,24 +1,18 @@
 #include "stm32f10x.h"                  // Device header
-#include "Motion.h"
-#include "PWM-Motor.h"
 #include "PID.h"
 #include <math.h>
-
-#define PID_PTERM_CLAMP     MOTOR_PWM_DUTY_MAX
-#define PID_ITEMR_CLAMP     110.0f
-#define PID_RAMP_STEP_SIZE  64.0f
 
 void PID_Ramp(PidParams_t* params)
 {
     if(params->rampPoint < params->setPoint)
     {//forward ramping
-        params->rampPoint += PID_RAMP_STEP_SIZE;
+        params->rampPoint += params->rampStep;
         if(params->rampPoint > params->setPoint)
             params->rampPoint = params->setPoint;
     }
     else if(params->rampPoint > params->setPoint)
     {//backward ramping
-        params->rampPoint -= PID_RAMP_STEP_SIZE;
+        params->rampPoint -= params->rampStep;
         if(params->rampPoint < params->setPoint)
             params->rampPoint = params->setPoint;
     }
@@ -39,7 +33,7 @@ void PID_Update(PidParams_t* params, uint8_t shouldStop)
     params->errorInt += currError;
 
     //clamp integrated error
-    float intClamp = PID_ITEMR_CLAMP / params->Ki;
+    float intClamp = params->iTermClamp / params->Ki;
     if(fabsf(params->errorInt) > intClamp)
     {
         params->errorInt = intClamp * (params->errorInt > 0 ? 1 : -1);
@@ -49,11 +43,13 @@ void PID_Update(PidParams_t* params, uint8_t shouldStop)
                      params->Ki * params->errorInt;
 
     //output clamp control output to [-100, 100]
-    if (fabsf(params->output) > PID_PTERM_CLAMP)
+    if (fabsf(params->output) > params->pTermClamp)
     {
-        params->output = PID_PTERM_CLAMP * (params->output > 0 ? 1 : -1);
+        params->output = params->pTermClamp * (params->output > 0 ? 1 : -1);
     }
 }
+
+/* Unified PID Parameter Struct WRITE Services */
 
 void PID_WriteGains(PidParams_t* paramsDst, float Kp, float Ki)
 {
@@ -66,6 +62,19 @@ void PID_WriteGains(PidParams_t* paramsDst, float Kp, float Ki)
     }
 }
 
+void PID_WriteConfig(PidParams_t* paramsDst, float rampStep, float iTermClamp, float pTermClamp)
+{
+    if(paramsDst != 0)
+    {
+        if(rampStep >= 0.0f)
+            paramsDst->rampStep = rampStep;
+        if(iTermClamp >= 0.0f)
+            paramsDst->iTermClamp = iTermClamp;
+        if(pTermClamp >= 0.0f)
+            paramsDst->pTermClamp = pTermClamp;
+    }
+}
+
 void PID_WriteParams(PidParams_t* paramsDst, const PidParams_t* paramsSrc)
 {
     if(paramsDst != 0 && paramsSrc != 0)
@@ -75,6 +84,16 @@ void PID_WriteParams(PidParams_t* paramsDst, const PidParams_t* paramsSrc)
         paramsDst->errorInt  = paramsSrc->errorInt;
         paramsDst->output    = paramsSrc->output;
         paramsDst->rampPoint = paramsSrc->rampPoint;
+    }
+}
+
+void PID_CopyParams(PidParams_t* paramsDst, const PidParams_t* paramsSrc)
+{
+    if(paramsDst != 0 && paramsSrc != 0)
+    {
+        PID_WriteParams(paramsDst, paramsSrc);
+        PID_WriteGains(paramsDst, paramsSrc->Kp, paramsSrc->Ki);
+        PID_WriteConfig(paramsDst, paramsSrc->rampStep, paramsSrc->iTermClamp, paramsSrc->pTermClamp);
     }
 }
 
