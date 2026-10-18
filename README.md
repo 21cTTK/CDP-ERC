@@ -4,4 +4,5 @@
 
 - 调试平台：Keil μVision V5.39.0.0
 - 目标芯片：STM32F103C8T6
+- 底层依赖：标准外设库（SPL, STM32F10x_StdPeriph_Lib_V3.5.0）
 - 硬件配置：待补充
