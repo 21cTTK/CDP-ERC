@@ -1,0 +1,440 @@
+% !xelatex
+\documentclass[11pt,a4paper]{article}
+
+% --- Dep: Preamble --- %
+\input{preamble.tex}
+
+% --- Dep: Definitions --- %
+\input{def.tex}
+
+% ========================= HERE WE GO ========================== %
+\begin{document} % Probably-human-reviewed AI Slop that just works
+
+% === Title page === %
+\begin{titlepage}
+  \centering
+  \vspace*{3.2cm}
+  {\Huge\bfseries 综合项目 I\par}
+  \vspace{0.2cm}
+  {\Huge\bfseries 机器人系统设计与实现\par}
+  \vspace{0.5cm}
+  {\Huge\bfseries BOM · \hspace{1pt} 物料清单\par}
+  \vspace{0.8cm}
+  \vfill
+  {\large 第九小组\par}
+  \vspace{0.3cm}
+  {\large 2026 年 10 月\par}
+  \vspace{1.5cm}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% === Section - Overview === %
+\section{总览}
+
+\subsection{物料清单}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}} L{6.4cm} L{3.2cm} L{2.0cm} @{}}
+    \toprule
+    \textbf{项目} & \textbf{分组} & \textbf{数量} \\
+    \midrule
+    STM32F103C8T6 开发板及常用器件 (\ref{pt:stm32}) & STM32 开发套件 & 1 \\
+    MB102 电源板及面包板套件 (\ref{pt:mb102}) & STM32 开发套件 & 1 \\
+    杜邦线和面包板跳线 (\ref{pt:wiring}) & STM32 开发套件 & 若干 \\
+    XH2.54 公母线 (\ref{pt:wiring}) & 供电导线 & 1 组 \\
+    焊台 (\ref{pt:solder}) & 焊接工具 & 1 \\
+    烙铁头 (\ref{pt:solder}) & 焊接工具 & 1 \\
+    焊锡 (\ref{pt:solder}) & 焊接工具 & 足量 \\
+    切割工具：美工刀或刻刀 (\ref{pt:solder}) & 通用工具 & 1 \\
+    螺丝、螺母、螺丝刀及钳子 (\ref{pt:fastener}) & 通用工具 & 若干 \\
+    MPU6050 陀螺仪 (\ref{pt:mpu}) & 运动控制 & 1 \\
+    HC-05 蓝牙模块 (\ref{pt:bluetooth}) & 无线指令收发 & 1 \\
+    12V 锂电池 (\ref{pt:battery}) & 所有供电 & 1 \\
+    DC-DC 大功率降压模块 (\ref{pt:dcdc}) & 小车电机/供电 & 1 \\
+    TB6612FNG 电机驱动模块 (\ref{pt:driver}) & 小车电机/控制 & 2 \\
+    带霍尔编码器的 JGA25-370 减速电机 (\ref{pt:motor}) & 小车电机 & 4 \\
+    适配上述电机的小车底盘套件 (\ref{pt:chassis}) & 小车底盘 & 1 \\
+    \bottomrule
+  \end{tabular*}
+  \caption{物料清单（项目名后的编号指向各个采购说明小节，可点击跳转）}
+  \label{tab:overview}
+\end{table}
+
+\subsection{供电方案}\label{sec:power}
+
+\point{电机电源供电流程}
+
+\begin{enumerate}[label=\arabic*., itemsep=3pt]
+  \item \obsidianlink{\hyperref[pt:mb102]{MB102 电源板}}的圆头输入接 \obsidianlink{\hyperref[pt:battery]{12V 锂电池}}
+
+        \imgrow{0.42}{PWR0.jpg}
+
+  \item \obsidianlink{\hyperref[pt:mb102]{MB102 电源板}}插入面包板，通过 $3.3\,\mathrm{V}$ 引脚给单片机供电（具体连接方法自行搜索）
+
+  \item 因为 MB102 没有直连输入的输出引脚，需要焊接一个\obsidianlink{\hyperref[pt:wiring]{XH2.54 接头}}来引出 $12\,\mathrm{V}$ 输出，再接到 \obsidianlink{\hyperref[pt:dcdc]{DC-DC 降压模块}}
+
+        \imgrow{0.38}{PWR1.jpg}
+
+  \item \obsidianlink{\hyperref[pt:dcdc]{DC-DC 降压模块}} 与面包板共地，正极输出接入两个\obsidianlink{\hyperref[pt:driver]{电机驱动}}的 \code{VM} 引脚（电机驱动的接线跳转查看）
+
+        \imgrow{0.42}{PWR2.jpg}
+
+  \item 以 \code{A} 组为例，\obsidianlink{\hyperref[pt:driver]{电机驱动}}输出口 \code{AO1}、\code{AO2} 分别接到\obsidianlink{\hyperref[pt:motor]{电机}}的红线/白线。没有规定的顺序，如果测试时运动方向与定义的“正向”不同，可以把两条线对换解决。
+
+\end{enumerate}
+
+\quad
+
+\point{注意事项}
+
+\begin{calloutwarning}
+  \textbf{禁止把 MB102 电源板的输出引脚接到任何一个电机驱动的供电脚（\code{VM}）}
+\end{calloutwarning}
+
+\emph{烧点解析}：以下错误行为可能导致电源板、电源回路上的各种器件，甚至是单片机芯片被过大的电流烧坏
+
+\begin{itemize}
+  \item 多电源供电：同时用 STLink 和电源板给单片机供电
+  \item 大负载电路不接独立电源：直接把引脚接到任何一个电机驱动的供电脚（\code{VM}）
+  \item 错误测量方法：用万用表的电流档去测电压
+\end{itemize}
+
+% === Section - Prereq === %
+\section{前提材料}
+
+这部分是必备的通用材料，默认每个组都有或借得到，如果以下材料都有了可以跳过这部分
+
+\begin{table}[H]
+  \centering
+  \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}} L{6.1cm} L{4.4cm} L{2.0cm} @{}}
+    \toprule
+    \textbf{项目} & \textbf{分组} & \textbf{数量} \\
+    \midrule
+    STM32F103C8T6 开发板 (\ref{pt:stm32}) & STM32 开发套件 & 1 \\
+    MB102 电源板及面包板套件 (\ref{pt:mb102}) & STM32 开发套件 & 1 \\
+    杜邦线和面包板跳线 (\ref{pt:wiring}) & STM32 开发套件 & 若干 \\
+    XH2.54 公母线 (\ref{pt:wiring}) & 供电导线 & 1 组 \\
+    焊台 (\ref{pt:solder}) & 焊接工具 & 1 \\
+    烙铁头 (\ref{pt:solder}) & 焊接工具 & 1 \\
+    焊锡 (\ref{pt:solder}) & 焊接工具 & 足量 \\
+    切割工具：美工刀或刻刀 (\ref{pt:solder}) & 通用工具 & 1 \\
+    螺丝、螺母、螺丝刀及钳子 (\ref{pt:fastener}) & 通用工具 & 若干 \\
+    \bottomrule
+  \end{tabular*}
+  \caption{前提材料（项目名后的编号指向下文采购说明）}
+  \label{tab:prereq}
+\end{table}
+
+下面是物料采购详细说明
+
+\point{江协套件：STM32F103C8T6}\label{pt:stm32}
+
+\emph{冷知识}：做 STM32 智能小车一定要有\textbf{STM32 开发板}
+
+\emph{采购建议}：建议购买 \weblink{https://jiangxiekeji.com/purchase.html}{江协科技套件}，其中包含开发板、面包板及其他各种相关器件，但注意网上有很多不是官方版本的套件，配件清单会有所出入。
+
+\point{江协套件：MB102}\label{pt:mb102}
+
+这里包含用于给单片机供电的 \textbf{MB102 电源板}和用于接线的 \textbf{830 孔面包板}。江协科技套件中包含此款面包板及电源板
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{MB102 面包板电源板} 自行购买
+  \item \weblink{https://e.tb.cn/h.8BODXRFC4bwunyz?tk=rbS3Tq5rCou}{示例店铺}（商品名 \code{（基础款带线）830孔面包板套件 黑板}，参考价 $15.15$\,\yuan）
+\end{itemize}
+
+\emph{说明}：如果有经常焊接的条件，可以使用万能板代替面包板进行开发
+
+\begin{calloutwarning}
+  \textbf{禁止把输出引脚接到任何一个电机驱动的供电脚（\code{VM}）}
+\end{calloutwarning}
+
+\begin{seealso}
+  也见：MB102 电源板属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\point{接线相关}\label{pt:wiring}
+
+江协科技套件中包含的那些线肯定够用了，但套件里 \textbf{没有} XH2.54 公母线，如果要采用本套物料清单的 \obsidianlink{\hyperref[sec:power]{供电方案}}，最好额外购买一组 XH2.54 公母线。
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{XH2.54} 自行购买
+  \item \weblink{https://e.tb.cn/h.jZJ4wdjFpjZaF98?tk=jlNLTqmaD7J}{示例店铺}（商品名 \code{XH2.54彩排线---公/母头2P（10套）}，参考价 $4$\,\yuan）
+\end{itemize}
+
+\emph{说明}：也可以拿两条公对母杜邦线，一条当 \code{GND} 一条当 \code{VCC}，分别对半切了焊到电源板和 DC-DC 降压模块上当插头用，但这种方案有接错导致器件烧毁的风险，还是 XH2.54 插头更好一些
+
+\begin{seealso}
+  也见：XH2.54 属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\point{焊接相关}\label{pt:solder}
+
+\emph{使用场景}：下面是综设 I 中可能的使用场景
+
+\begin{itemize}
+  \item \textbf{4 个带编码器电机的引出排线需要焊杜邦线后才能插入面包板}
+  \item \textbf{MB102 电源板需要焊接 XH2.54 接头才能引出输入原电压}
+  \item 如果购买的任何元件引脚不带排针则需要自行焊接排针
+  \item 不小心把某个器件烧了需要更换
+  \item 全程使用万能板开发
+  \item 开发完成后需要 PCB 打板自己焊零件
+\end{itemize}
+
+本套物料清单提供的方案硬性要求第一点和第二点，除非能想办法避开这两点，\textbf{焊接几乎是必须的}
+
+\emph{采购建议}：预算约 $250$\,\yuan，可小组集资购买或向他人借用
+
+\begin{itemize}
+  \item 购物软件搜索 \code{电烙铁套件} 自行选购，最少需要购买\textbf{焊台}、\textbf{烙铁头}及\textbf{焊锡}
+  \item \weblink{https://e.tb.cn/h.8AwFCH96j2yxIiv?tk=vNgSTq5qPMW}{示例店铺}（中深技工 T12 焊台，商品名 \code{T12电焊台}，参考价 $198$\,\yuan）
+  \item \weblink{https://e.tb.cn/h.8AwFCH96j2yxIiv?tk=vNgSTq5qPMW}{示例店铺}（T12KR 烙铁头，商品名 \code{T12KR}，参考价 $18$\,\yuan）
+  \item \weblink{https://e.tb.cn/h.jZk4CiqN7tvTP11?tk=zxTGTq6pOs0}{示例店铺}（无铅焊锡，商品名 \code{3米价格1MM规格无铅}，参考价 $18.4$\,\yuan）
+\end{itemize}
+
+在上述 \emph{使用场景} 的第一点中还需要准备\textbf{美工刀}或\textbf{刻刀}来给杜邦线割包皮，用于与编码器引出线焊接
+
+\begin{seealso}
+  也见：杜邦线与编码器引出线焊接属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\begin{seealso}
+  也见：焊接相关可选材料（见 \obsidianlink{\hyperref[sec:optional]{可选材料}}）
+\end{seealso}
+
+\point{固紧件相关}\label{pt:fastener}
+
+\begin{calloutwarning}
+  目前找到的小车底盘套件及电机套件中\textbf{配套的螺丝其实不够长}，把电机固定到底盘上需要准备至少 20 颗 10\,mm 长的 M2.5 螺丝及螺母
+\end{calloutwarning}
+
+\emph{工具准备}：拧螺丝需要\textbf{螺丝刀}，拧螺母需要\textbf{钳子}
+
+% === Section - Ess === %
+\section{必备材料}
+
+这部分的材料专门用于本次综设 I 项目，请检查是否已经备好以下材料。
+
+\begin{table}[H]
+  \centering
+  \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}} L{4.5cm} L{2.1cm} L{1.3cm} L{2.8cm} @{}}
+    \toprule
+    \textbf{项目} & \textbf{功能/模块} & \textbf{数量} & \textbf{参考价}$_{\text{\tiny *四舍五入到 5 的倍数，不含运费/优惠。}}$ \\
+    \midrule
+    MPU6050 陀螺仪 (\ref{pt:mpu}) & 运动控制 & 1 & $10$\,\yuan \\
+    HC-05 蓝牙模块  (\ref{pt:bluetooth}) & 无线指令收发 & 1 & $20$\,\yuan \\
+    12V 锂电池 (\ref{pt:battery}) & 所有供电 & 1 & $40$\,\yuan \\
+    DC-DC 大功率降压模块 (\ref{pt:dcdc}) & 小车电机/供电 & 1 & $30$\,\yuan \\
+    TB6612FNG 电机驱动模块 (\ref{pt:driver}) & 小车电机/控制 & 2 & $10$\,\yuan$\times2=20$\,\yuan \\
+    带霍尔编码器的 JGA25-370 减速电机 (\ref{pt:motor}) & 小车电机 & 4 & $25$\,\yuan$\times4=100$\,\yuan \\
+    适配上述电机的小车底盘套件 (\ref{pt:chassis}) & 小车底盘 & 1 & $45$\,\yuan \\
+    \midrule
+    \textbf{总和} & 总计 & 10 & $265$\,\yuan \\
+    \bottomrule
+  \end{tabular*}
+  \caption{必备材料（项目名后的编号指向下文采购说明）}
+  \label{tab:required}
+\end{table}
+
+下面是物料采购详细说明
+
+\point{MPU6050 陀螺仪}\label{pt:mpu}
+
+使用 MPU6050 中的偏航角一轴来判断小车是否按照指令直线行驶并辅助控制电机
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 江协科技套件中应该已经包含这一元件，如果没有则自行购买
+  \item 购物软件搜索 \code{MPU6050}，如果不准备自己焊，注意购买焊好引脚的款式
+  \item \weblink{https://e.tb.cn/h.j042nEh3tkKYpgF?tk=gMEsTJ1zOtt}{示例商铺}（商品名 \code{国产芯片MPU6050模块（焊直针向下）}，参考价 $8.85$\,\yuan）
+\end{itemize}
+
+\point{HC-05 蓝牙模块}\label{pt:bluetooth}
+
+使用蓝牙与上位机软件进行串口通信，实现无线收发指令
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{HC-05 蓝牙}，如果不准备自己焊，注意购买焊好引脚的款式
+  \item \weblink{https://e.tb.cn/h.8BuPGHqfaynJske?tk=5kDrTqmBvdQ}{示例商铺}（商品名 \code{【 兼容版】HC-05蓝牙模块 带底板焊排针（1只）}，参考价 $17.1$\,\yuan）
+\end{itemize}
+
+\emph{说明}：也可用 ESP-01 等 Wi-Fi 模块替代，只要能通过串口无线收发即可。
+
+\point{12V 锂电池}\label{pt:battery}
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{12V锂电池}，注意选择有充电器的款式
+  \item \weblink{https://e.tb.cn/h.jZrPfrYicCf8tw4?tk=3oUYTqNgnFM}{示例店铺}（商品名 \code{电显款12V【2800mAh】DC公母头}，参考价 $37$\,\yuan）
+\end{itemize}
+
+\emph{说明}：
+
+\begin{itemize}
+  \item 不带电量显示可以便宜 10 块左右，但带电量的显示用起来我安心[汤圆][汤圆]
+  \item 容量无所谓，但注意考虑小车底盘承重和层间高度限制，$2800\mathrm{mAh}$ 的能用很久了，别买个比充电宝都大的来用
+  \item \obsidianlink{\hyperref[pt:mb102]{MB102 电源板}}标的工作电压是 7-10V，这里多给个 2V 问题不大，毕竟我们的主要负载不在单片机而是有独立电源线的电机，因此单片机电路的电流不会太大，这样只要电源板上面的稳压器不过热就没事
+  \item 也可以找其他电压的电池组，但需要连带更改其他电源件，请自行决定
+\end{itemize}
+
+\begin{seealso}
+  也见：12V 锂电池属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\point{DC-DC 大功率降压模块}\label{pt:dcdc}
+
+\emph{用途说明}：为什么电机电源不能全部接到 MB102 电源板的 $5\,\mathrm{V}$ 供电上？
+
+\begin{itemize}
+  \item MB102 电源板上的核心部件 AMS1117 线性稳压器工作电流为 $<700\mathrm{mA}$
+  \item 减速电机在堵转情况下会产生很大的电流（现在选择的电机堵转电流为 $1.8\mathrm{A}$），
+  \item 而这么狂野的电机我们有四个！全部堵转时电流达到 $1.8\mathrm{A}\times 4=7.2\mathrm{A}\approx 10\times 700\mathrm{mA}$
+  \item 造化一般的 MB102 电源板在十倍的标称电流下不太可能不烧
+\end{itemize}
+
+综上所述，需要一个不经过电源板内部电路的模块直接为所有电机供电。其输入为唯一电源（锂电池 $12\,\mathrm{V}$），输出为电机驱动模块的电源输入（$5\,\mathrm{V}$ 的 \code{VM} 引脚），因此选择输入电压大于 $12\,\mathrm{V}$、输出 $5\,\mathrm{V}$、能承受 $7.2\,\mathrm{A}$ 最大电流的大功率 DC-DC 降压模块
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{DC-DC大功率降压}，注意选取输入电压大于 $12\,\mathrm{V}$、输出 $5\,\mathrm{V}$、输出电流 $8\,\mathrm{A}$ 及以上的款式
+  \item \weblink{https://e.tb.cn/h.jZIToYshCfepTDC?tk=CDyeTqn2dcL}{示例店铺}（商品名 \code{黑色3580 6-35V转【5V】8A}，参考价 $27.9$\,\yuan）
+\end{itemize}
+
+\emph{说明}：
+
+\begin{itemize}
+  \item 该模块输入电压范围为 $6\sim35\,\mathrm{V}$，本方案输入 $12\,\mathrm{V}$，输出 $5\,\mathrm{V}$、最大 $8\,\mathrm{A}$，满足电机驱动供电需求。
+  \item 全部电机同时堵转的可能性较低，且若发生全部堵转，电机驱动模块可能先于 DC-DC 模块损坏（详见电机驱动模块说明）。
+\end{itemize}
+
+\begin{seealso}
+  也见：8A DC-DC 降压模块属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\point{TB6612FNG 电机驱动模块}\label{pt:driver}
+
+\emph{TB6612FNG 引脚实物图}：
+
+\imgfigure{0.42}{IMG_20260914_111850_edit_5993387613461033.jpg}{TB6612FNG 引脚实物图}
+
+TB6612FNG 电机驱动模块接入方向控制信号（\code{AINx}、\code{BINx}）、电机电源与接地（\code{VM}、\code{GND}）、用于控制转速的 PWM 信号（\code{PWMA}、\code{PWMB}）及使能（\code{STBY}）后，即可输出与 \code{VM} 电压一致的驱动信号 \code{AOx}、\code{BOx} 来驱动两组电机工作
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{TB6612 电机驱动}，注意要买\textbf{两个}
+  \item \weblink{https://e.tb.cn/h.8BFBFnvWQSAC6d3?tk=TN5GTqnQnG1}{示例店铺}（商品名 \code{TB6612FNG电机驱动模块（红板-焊好）}，参考价 $11.8$\,\yuan）
+\end{itemize}
+
+\emph{注意}：
+
+本项目四轮小车只需控制左、右两组电机，组内运动状态保持一致。实测可只用一个驱动模块，左右组分别接到 \code{A} 和 \code{B} 两组引脚，并将组内输出并联，即可用一个控制信号和 PWM 信号控制一组两个电机。
+
+虽然这样也能运行，但出于电流安全考虑，仍应使用两个驱动模块：TB6612FNG 峰值电流为 $3.2\,\mathrm{A}$，输出并联后电流相加，四个电机一起堵转时的 $7.2\,\mathrm{A}$ 远超一个模块的承受范围。
+
+分成两个模块后，每侧两个电机一起堵转的 $3.6\,\mathrm{A}$ 仍不太安全。实际操作中虽不会经常吃满，但仍需做堵转保护，在软件层面限制每组的 PWM 占空比和持续时间。
+
+\begin{seealso}
+  也见：TB6612FNG 电机驱动模块属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\point{小车电机}\label{pt:motor}
+
+选取带有编码器的电机，便于直接读取编码器信号
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{STM32小车编码器电机}，购买与下图相似的版本；注意我们应该购买\textbf{四个电机}
+  \item \weblink{https://e.tb.cn/h.8zw3DX9LMkrdUGD?tk=8gZTTqM4muU}{示例店铺}：按如下规格选取
+
+        \imgfigure{0.52}{4382798490.png}{电机选型规格}
+\end{itemize}
+
+\emph{电机排线示意图}：
+
+\imgfigure{0.3}{tb_image_share_1789712514890.png}{电机排线示意图}
+
+\emph{说明}：
+
+\begin{itemize}
+  \item 标称工作电压为 $6\,\mathrm{V}$，本方案实际输入 $5\,\mathrm{V}$（详见 \obsidianlink{\hyperref[sec:power]{供电方案}}），，可能最大扭矩会有所下降不过都差球不多问题不大，注意不要供超过 $6\mathrm{V}$ 的电就行。
+  \item 根据项目经验，空载转速建议选择 $280\,\mathrm{rpm}$，转速主要影响电机堵转扭矩，扭矩过小会导致小车在转弯时内侧车轮被卡住。具体扭矩可以参考卖家的商品详情，这里附一张示例店铺的商品参数：
+
+    \imgfigure{0.52}{4768274967269.png}{电机扭矩参数示意图}
+  
+  \item 如果购买不带编码器的 TT 马达电机，则需自行购买对射式红外传感器，通过输入捕获进行脉冲计数。
+\end{itemize}
+
+\begin{seealso}
+  也见：带霍尔编码器的 JGA25-370 减速电机属于本套物料清单 \obsidianlink{\hyperref[sec:power]{供电方案}} 的一部分，跳转查看对应接线参考
+\end{seealso}
+
+\point{小车底盘}\label{pt:chassis}
+
+\emph{采购建议}：
+
+\begin{itemize}
+  \item 购物软件搜索 \code{STM32小车底盘}，找\textbf{适配所选电机的版本}
+  \item \weblink{https://e.tb.cn/h.jZsI29mbZ32sY5R?tk=vfm8TqMqzSG}{示例店铺}（商品名 \code{26 电赛 大号亚克力底盘底板（双层）（260 系列） 整车宽小于 25cm}，参考价 $46$\,\yuan）
+\end{itemize}
+
+\emph{说明}：
+
+\begin{itemize}
+  \item 尺寸需与所选电机适配，确保两侧电机安装后不干涉（示例商品能够安装，但间距仅剩 5\,cm；若换成 20\,cm 款可能不适用）
+
+        \imgfigure{0.42}{BASE.jpg}{底盘示意图}
+
+  \item 不要买没有标明可适配所选电机的底盘款式
+  \item 注意轮子上有一个螺丝孔，实地测试时用螺丝将其拧紧
+\end{itemize}
+
+% === Section - Opt === %
+\newpage
+\section{可选材料}\label{sec:optional}
+
+\begin{itemize}
+  \item \textbf{可选功能模块}
+        \begin{itemize}
+          \item OLED：增加一种显示调试信息或图形的方法
+          \item ESP-01：可代替 HC-05
+        \end{itemize}
+  \item \textbf{实用小工具}
+        \begin{itemize}
+          \item 万用表/示波器：调试时经常使用
+          \item 电工胶布：将面包板、电池固定在底盘上，或代替热缩套管包裹裸露导线……
+          \item 切割垫：保护桌面
+          \item 剪钳：剪线头，可用于代替美工刀/刻刀削杜邦线
+          \item 多格可拆零件盒：整理零件
+        \end{itemize}
+  \item \textbf{焊接相关非必需材料}
+        \begin{itemize}
+          \item 烙铁架：放置烙铁
+          \item 高温海绵：清洁烙铁
+          \item 焊接夹具：固定待焊器件
+          \item 热缩套管：包裹焊好的裸露导线段
+          \item 松香或助焊剂：增强焊锡流动性
+          \item 吸锡带：清除多余焊锡
+          \item 排针、排母：作为插头接口
+        \end{itemize}
+\end{itemize}
+
+% ========================= HERE WE'RE DONE ========================== %
+%       By Shunophilexlny. Follow The License. Do Not Be Naughty       %
+% =========================  JUST FOR DECO  ========================== %
+
+\end{document}

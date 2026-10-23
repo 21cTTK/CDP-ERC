@@ -1,0 +1,85 @@
+% --- Dep: Preamble --- %
+\input{preamble}
+
+% colors|tcolorbox,xcolor
+\definecolor{obsPurple}{HTML}{7A4FBF}   % Obsidian-styled links
+\definecolor{obsPurpleBg}{HTML}{F6F1FD}
+\definecolor{linkBlue}{HTML}{1B5FA8}    % external links
+\definecolor{warnOrange}{HTML}{E8830C}
+\definecolor{warnDark}{HTML}{B35B00}
+\definecolor{infoBlue}{HTML}{2C7FB8}
+\definecolor{infoDark}{HTML}{1B5E8A}
+\definecolor{ruleGray}{HTML}{9AA0A6}
+\definecolor{codeBg}{HTML}{F0F0F0}      % GFM inline codes padding
+
+% Links spec|hyperref
+\hypersetup{ % overall link config setup
+  colorlinks = false,
+  allbordercolors = {obsPurple},
+  citebordercolor = {obsPurple},
+  linkbordercolor = {obsPurple},
+  filebordercolor = {obsPurple},
+  urlbordercolor  = {obsPurple},
+  pdfborder = {0 0 0.8},
+  pdftitle = {综设 I 物料清单},
+  pdfcreator = {XeLaTeX}
+}
+\urlstyle{same}
+
+% Obsidian-styled links|hyperref
+\newcommand{\weblink}[2]{\href{#1}{\textcolor{linkBlue}{\underline{#2}}}}  % external links
+\newcommand{\obsidianlink}[1]{\textcolor{obsPurple}{\underline{#1}}}       % internal links
+
+% GFM-styled inline codes
+\newtcbox{\codebox}{on line, boxrule=0pt, arc=2pt, colback=codeBg,
+  left=2pt, right=2pt, top=1pt, bottom=1pt, boxsep=0pt, fontupper=\ttfamily}
+\newcommand{\code}[1]{\hspace{2pt}\codebox{#1}\hspace{2pt}} % auto whitespace before inline codes
+
+% Tables
+%% col spec
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\renewcommand{\arraystretch}{1.25}
+\setlength{\tabcolsep}{4pt}
+%% Tighting the space
+\setlist{itemsep=1pt,parsep=0pt,topsep=3pt,partopsep=0pt}
+\setlength{\parskip}{0.35em}
+
+% "Point" Def
+\newcounter{point}
+\makeatletter
+\newcommand{\point}[1]{%
+  \par\addvspace{0.8em}%
+  \refstepcounter{point}%
+  \noindent\textbf{\thepoint.\ #1}%
+  \@ifnextchar\par{}{\hspace{0.45em}}%
+}
+\makeatother
+
+% Imgs Def
+\newcommand{\imgrow}[2]{%
+  \begin{center}%
+    \includegraphics[width=#1\linewidth]{img/#2}%
+  \end{center}%
+}
+\newcommand{\imgfigure}[3]{%
+  \begin{figure}[H]%
+    \centering
+    \includegraphics[width=#1\linewidth]{img/#2}%
+    \caption{#3}%
+  \end{figure}%
+}
+
+% MD-like "Callout" Def
+%% Type "WARNING"
+\newenvironment{calloutwarning}
+  {\begin{tcolorbox}[enhanced,breakable,colback=warnOrange!5,colframe=warnOrange,
+     boxrule=0pt,leftrule=2.5pt,arc=2pt,left=7pt,right=7pt,top=4pt,bottom=4pt]}
+  {\end{tcolorbox}}
+%% Type "SA"
+\newenvironment{seealso}
+  {\begin{tcolorbox}[enhanced,breakable,colback=obsPurpleBg,colframe=obsPurple,
+     boxrule=0pt,leftrule=2.5pt,arc=2pt,left=7pt,right=7pt,top=4pt,bottom=4pt]}
+  {\end{tcolorbox}}
+
+% Convenient Def for price unit
+\newcommand{\yuan}{\mbox{元}}

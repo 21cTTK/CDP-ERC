@@ -22,17 +22,11 @@
 ## 文档说明
 
 > [!NOTE]
-> 文档不与代码同步更新，已确认的最后更新时间为 `261023T151406`，且并不代表文件是在这之前项目的完整文档，后续可能会有补充和修正。
+> 文档不与代码同步更新，已确认的最后更新时间为 `261023T211115`，且并不代表文件是在这之前项目的完整文档，后续可能会有补充和修正。
 
-第一阶段文档说明：项目目前没有专门的文档，[DOCS](DOCS/) 目录下的相关资料充当临时文档。
+第一阶段文档说明：项目目前没有专门的文档，[DOCS](DOCS/) 目录下的相关资料充当临时文档，详情请见 [DOCS](DOCS/) 的 [README](DOCS/README.DOCS.md) 文件。
 
-- 现阶段完成的任务及后续开发计划详见 [演示文档PDF](DOCS/综设I-演示文档.pdf) 的第一部分 “项目概况”
-- [演示文档PDF](DOCS/综设I-演示文档.pdf) 的第二部分 “关键技术” 充当临时设计文档
-- [物料清单](DOCS/BOM.pdf) 作为硬件选型和装配的参考
-- [引脚定义图](DOCS/Pinout.png) 作为硬件连接的参考
-- [.SRC](DOCS/.SRC) 目录下提供了部分资料的源文件
-
-由于不是完整项目实现，目前文档简单介绍如何复现软硬件环境，后续会逐渐补充，待第二、第三阶段开发完成且交付后会给出完整的文档。
+由于不是完整项目实现，目前本文档简单介绍如何复现软硬件环境，后续会逐渐补充，待第二、第三阶段开发完成且交付后会给出完整的文档。
 
 ## 开发环境
 
@@ -139,6 +133,7 @@
 │  └─ ...
 └─ DOCS/                      # 文档与素材
    ├─ LICENSE
+   ├─ README.DOCS.md          # DOCS 目录说明
    ├─ 综设I-演示文档.pdf       # 临时文档
    ├─ BOM.pdf                 # 物料清单
    ├─ Pinout.png              # 引脚分配
@@ -153,5 +148,5 @@
 
 本项目采用 [MIT 许可证](./LICENSE)，Copyright (c) 2026 Shunophilexlny。**除下列目录外，本仓库的所有内容均适用 MIT 许可证**：
 
-- [LIB/](LIB/)：STM32F10x 标准外设库 V3.5.0（© 2011 STMicroelectronics），属第三方代码，从 [江协科技STM32入门教程资料](https://jiangxiekeji.com/download.html) 处下载，按随仓库提供的 [ST 软件包许可协议](./LIB/LICENSE)（SLA0044 Rev6）使用，这里仅展示文本，许可证以 [官方网站](https://www.st.com/resource/en/license_agreement/dm00218346.pdf) 为准；使用时需保留其版权声明，且仅限与 ST 生产的处理单元配合使用，不得使该部分代码受开源许可证约束。
-- [DOCS/](DOCS/)：文档与素材，采用临时的 All Rights Reserved（ARR）许可，详见 [DOCS/LICENSE](./DOCS/LICENSE)；待 [DOCS/.SRC](DOCS/.SRC) 下的文档源文件补充完毕后，会将替换为正式的开源许可证。
+- [LIB/](LIB/)：STM32F10x 标准外设库 V3.5.0（© 2011 STMicroelectronics），属第三方代码，从 [江协科技STM32入门教程资料](https://jiangxiekeji.com/download.html) 处下载；仓库内的 [LIB/LICENSE](./LIB/LICENSE) 为 ST 软件包许可协议（SLA0044 Rev6）文本，如与 ST 官方发布的版本不一致，以 ST 官方发布为准。使用时需保留其版权声明，且仅限与 ST 生产的处理单元配合使用，不得使该部分代码受开源许可证约束。
+- [DOCS/](DOCS/)：文档与素材，采用 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 许可协议，详见 [DOCS/LICENSE](./DOCS/LICENSE)。
