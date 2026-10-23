@@ -1,0 +1,7 @@
+__prjref/
+.vscode/
+Objects/
+Listings/
+*.uvguix.*
+EventRecorderStub.scvd
+DebugConfig/
